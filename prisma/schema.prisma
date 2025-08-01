@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      UserRole @default(ADMIN)
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  auditLogs AuditLog[]
+  tickets   Ticket[]
+
+  @@map("users")
+}
+
+model Country {
+  id           String @id @default(cuid())
+  name         String
+  code         String @unique
+  currency     String
+  currencyCode String
+  flag         String
+  active       Boolean @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  wallets            Wallet[]
+  paymentMethods     CountryPaymentMethod[]
+  senderTransactions Transaction[] @relation("SenderCountry")
+  receiverTransactions Transaction[] @relation("ReceiverCountry")
+
+  @@map("countries")
+}
+
+model PaymentMethod {
+  id          String            @id @default(cuid())
+  name        String
+  type        PaymentMethodType
+  apiConfig   Json?
+  minAmount   Decimal           @default(0)
+  maxAmount   Decimal?
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  countries    CountryPaymentMethod[]
+  subWallets   SubWallet[]
+  transactions Transaction[]
+
+  @@map("payment_methods")
+}
+
+model CountryPaymentMethod {
+  id              String @id @default(cuid())
+  countryId       String
+  paymentMethodId String
+  active          Boolean @default(true)
+  minAmount       Decimal @default(0)
+  maxAmount       Decimal?
+  createdAt       DateTime @default(now())
+
+  country       Country       @relation(fields: [countryId], references: [id])
+  paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+
+  @@unique([countryId, paymentMethodId])
+  @@map("country_payment_methods")
+}
+
+model Wallet {
+  id        String    @id @default(cuid())
+  countryId String
+  balance   Decimal   @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  country    Country     @relation(fields: [countryId], references: [id])
+  subWallets SubWallet[]
+
+  @@unique([countryId])
+  @@map("wallets")
+}
+
+model SubWallet {
+  id              String  @id @default(cuid())
+  walletId        String
+  paymentMethodId String
+  balance         Decimal @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  wallet        Wallet        @relation(fields: [walletId], references: [id])
+  paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+
+  @@unique([walletId, paymentMethodId])
+  @@map("sub_wallets")
+}
+
+model Transaction {
+  id                String            @id @default(cuid())
+  reference         String            @unique
+  senderName        String
+  senderEmail       String
+  senderPhone       String
+  senderCountryId   String
+  receiverName      String
+  receiverEmail     String?
+  receiverPhone     String
+  receiverCountryId String
+  amount            Decimal
+  fees              Decimal           @default(0)
+  totalAmount       Decimal
+  paymentMethodId   String
+  status            TransactionStatus @default(PENDING)
+  paymentProof      String?
+  adminNotes        String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  senderCountry   Country       @relation("SenderCountry", fields: [senderCountryId], references: [id])
+  receiverCountry Country       @relation("ReceiverCountry", fields: [receiverCountryId], references: [id])
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  ticket          Ticket?
+  auditLogs       AuditLog[]
+
+  @@map("transactions")
+}
+
+model Ticket {
+  id            String       @id @default(cuid())
+  transactionId String       @unique
+  userId        String?
+  status        TicketStatus @default(OPEN)
+  subject       String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  transaction Transaction    @relation(fields: [transactionId], references: [id])
+  user        User?          @relation(fields: [userId], references: [id])
+  messages    TicketMessage[]
+
+  @@map("tickets")
+}
+
+model TicketMessage {
+  id        String    @id @default(cuid())
+  ticketId  String
+  message   String    @db.Text
+  isAdmin   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id])
+
+  @@map("ticket_messages")
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  userId        String?
+  transactionId String?
+  action        String
+  details       Json?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  user        User?        @relation(fields: [userId], references: [id])
+  transaction Transaction? @relation(fields: [transactionId], references: [id])
+
+  @@map("audit_logs")
+}
+
+enum UserRole {
+  ADMIN
+  VIEWER
+}
+
+enum PaymentMethodType {
+  API
+  MANUAL
+  FLUTTERWAVE
+  MOBILE_MONEY
+  BANK_TRANSFER
+}
+
+enum TransactionStatus {
+  PENDING
+  PAID
+  APPROVED
+  REJECTED
+  COMPLETED
+  FAILED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
