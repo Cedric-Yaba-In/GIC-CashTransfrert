@@ -7,6 +7,14 @@ export async function syncDatabase() {
   try {
     console.log('🔄 Synchronisation de la base de données...')
 
+    // Check if tables exist first
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM users LIMIT 1`
+    } catch (error) {
+      console.log('⚠️ Tables non créées, synchronisation ignorée')
+      return
+    }
+
     // Check if basic data exists
     const adminExists = await prisma.user.findUnique({
       where: { email: 'admin@gicpromoteltd.com' }
