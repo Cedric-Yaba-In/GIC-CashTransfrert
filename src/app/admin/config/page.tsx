@@ -231,7 +231,30 @@ export default function ConfigPage() {
       <ContentLoader loading={loading}>
         {/* Actions */}
         <div className="mb-8">
-          <div className="flex items-center justify-end space-x-4">
+          <div className="flex items-center justify-between">
+            {configs.length === 0 && (
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/admin/seed-config', { method: 'POST' })
+                    const result = await response.json()
+                    if (response.ok) {
+                      toast.success('Configurations créées', result.message)
+                      fetchConfigs()
+                    } else {
+                      toast.error('Erreur', result.error)
+                    }
+                  } catch (error) {
+                    toast.error('Erreur', 'Impossible de créer les configurations')
+                  }
+                }}
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-[#0B3371] to-[#0B3371]/80 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+              >
+                <Settings className="w-5 h-5" />
+                <span>Initialiser les configurations</span>
+              </button>
+            )}
+            <div className="flex items-center space-x-4">
               {changes.size > 0 && (
                 <div className="flex items-center space-x-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
                   <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
@@ -255,6 +278,7 @@ export default function ConfigPage() {
                 )}
                 <span>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</span>
               </button>
+            </div>
           </div>
         </div>
 
