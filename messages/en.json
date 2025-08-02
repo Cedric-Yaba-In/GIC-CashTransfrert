@@ -1,0 +1,108 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search"
+  },
+  "navigation": {
+    "home": "Home",
+    "transfer": "New transfer",
+    "track": "Track transfer",
+    "support": "Support",
+    "admin": "Administration"
+  },
+  "home": {
+    "title": "Transfer money quickly",
+    "subtitle": "Send money from one country to another without creating an account. Simple, fast and secure with GIC CashTransfer.",
+    "startTransfer": "Start a transfer",
+    "whyChoose": "Why choose GIC CashTransfer?",
+    "secure": "Secure",
+    "secureDesc": "Your transactions are protected by advanced security protocols",
+    "fast": "Fast",
+    "fastDesc": "Transfers processed quickly with administrative validation",
+    "international": "International",
+    "internationalDesc": "Send money to many countries around the world"
+  },
+  "transfer": {
+    "title": "New money transfer",
+    "subtitle": "Fill out the form to send money quickly and securely",
+    "step1": "Information",
+    "step2": "Payment",
+    "senderInfo": "Sender information",
+    "receiverInfo": "Receiver information",
+    "amount": "Amount to send",
+    "paymentMethod": "Payment method",
+    "fullName": "Full name",
+    "email": "Email",
+    "phone": "Phone",
+    "country": "Country",
+    "region": "Region",
+    "selectRegion": "Select a region",
+    "selectCountry": "Select a country",
+    "amountToSend": "Amount",
+    "fees": "Fees",
+    "total": "Total",
+    "continue": "Continue",
+    "createTransfer": "Create transfer",
+    "required": "required",
+    "optional": "optional"
+  },
+  "track": {
+    "title": "Track your transfer",
+    "subtitle": "Enter your transaction reference to see the status of your transfer",
+    "reference": "Transaction reference",
+    "referencePlaceholder": "Ex: GIC1234567890ABCD",
+    "search": "Search",
+    "transactionDetails": "Transaction details",
+    "sender": "Sender",
+    "receiver": "Receiver",
+    "status": {
+      "pending": "Pending",
+      "paid": "Paid",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "completed": "Completed"
+    },
+    "history": "History",
+    "downloadInvoice": "Download invoice",
+    "sendByEmail": "Send by email",
+    "contactSupport": "Contact support"
+  },
+  "support": {
+    "title": "Customer support",
+    "subtitle": "Need help? Contact our support team using your transaction reference",
+    "accessTicket": "Access your support ticket",
+    "emailUsed": "Email used for transaction",
+    "transactionRef": "Transaction reference",
+    "conversation": "Conversation",
+    "yourMessage": "Your message",
+    "messagePlaceholder": "Describe your problem or ask your question...",
+    "sendMessage": "Send message",
+    "faq": "Frequently asked questions",
+    "otherContact": "Other contact methods"
+  },
+  "admin": {
+    "title": "Administration",
+    "dashboard": "Dashboard",
+    "transactions": "Transactions",
+    "wallets": "Wallets",
+    "countries": "Countries",
+    "paymentMethods": "Payment methods",
+    "regions": "Regions",
+    "stats": {
+      "totalTransactions": "Total Transactions",
+      "pending": "Pending",
+      "approved": "Approved",
+      "totalVolume": "Total Volume"
+    }
+  }
+}

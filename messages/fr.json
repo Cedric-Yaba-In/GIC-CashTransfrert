@@ -1,0 +1,108 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "search": "Rechercher"
+  },
+  "navigation": {
+    "home": "Accueil",
+    "transfer": "Nouveau transfert",
+    "track": "Suivre un transfert",
+    "support": "Support",
+    "admin": "Administration"
+  },
+  "home": {
+    "title": "Transférez de l'argent rapidement",
+    "subtitle": "Envoyez de l'argent d'un pays à l'autre sans créer de compte. Simple, rapide et sécurisé avec GIC CashTransfer.",
+    "startTransfer": "Commencer un transfert",
+    "whyChoose": "Pourquoi choisir GIC CashTransfer ?",
+    "secure": "Sécurisé",
+    "secureDesc": "Vos transactions sont protégées par des protocoles de sécurité avancés",
+    "fast": "Rapide",
+    "fastDesc": "Transferts traités rapidement avec validation administrative",
+    "international": "International",
+    "internationalDesc": "Envoyez de l'argent vers de nombreux pays à travers le monde"
+  },
+  "transfer": {
+    "title": "Nouveau transfert d'argent",
+    "subtitle": "Remplissez le formulaire pour envoyer de l'argent rapidement et en sécurité",
+    "step1": "Informations",
+    "step2": "Paiement",
+    "senderInfo": "Informations de l'expéditeur",
+    "receiverInfo": "Informations du destinataire",
+    "amount": "Montant à envoyer",
+    "paymentMethod": "Méthode de paiement",
+    "fullName": "Nom complet",
+    "email": "Email",
+    "phone": "Téléphone",
+    "country": "Pays",
+    "region": "Région",
+    "selectRegion": "Sélectionner une région",
+    "selectCountry": "Sélectionner un pays",
+    "amountToSend": "Montant",
+    "fees": "Frais",
+    "total": "Total",
+    "continue": "Continuer",
+    "createTransfer": "Créer le transfert",
+    "required": "requis",
+    "optional": "optionnel"
+  },
+  "track": {
+    "title": "Suivre votre transfert",
+    "subtitle": "Entrez votre référence de transaction pour voir le statut de votre transfert",
+    "reference": "Référence de transaction",
+    "referencePlaceholder": "Ex: GIC1234567890ABCD",
+    "search": "Rechercher",
+    "transactionDetails": "Détails de la transaction",
+    "sender": "Expéditeur",
+    "receiver": "Destinataire",
+    "status": {
+      "pending": "En attente",
+      "paid": "Payé",
+      "approved": "Approuvé",
+      "rejected": "Rejeté",
+      "completed": "Terminé"
+    },
+    "history": "Historique",
+    "downloadInvoice": "Télécharger la facture",
+    "sendByEmail": "Envoyer par email",
+    "contactSupport": "Contacter le support"
+  },
+  "support": {
+    "title": "Support client",
+    "subtitle": "Besoin d'aide ? Contactez notre équipe support en utilisant votre référence de transaction",
+    "accessTicket": "Accéder à votre ticket de support",
+    "emailUsed": "Email utilisé pour la transaction",
+    "transactionRef": "Référence de transaction",
+    "conversation": "Conversation",
+    "yourMessage": "Votre message",
+    "messagePlaceholder": "Décrivez votre problème ou posez votre question...",
+    "sendMessage": "Envoyer le message",
+    "faq": "Questions fréquentes",
+    "otherContact": "Autres moyens de contact"
+  },
+  "admin": {
+    "title": "Administration",
+    "dashboard": "Dashboard",
+    "transactions": "Transactions",
+    "wallets": "Wallets",
+    "countries": "Pays",
+    "paymentMethods": "Moyens de paiement",
+    "regions": "Régions",
+    "stats": {
+      "totalTransactions": "Total Transactions",
+      "pending": "En attente",
+      "approved": "Approuvées",
+      "totalVolume": "Volume Total"
+    }
+  }
+}

@@ -2,16 +2,25 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
-import toast from 'react-hot-toast'
-import { Check, X, Eye, ArrowLeft } from 'lucide-react'
+import { useToast } from '@/components/ToastProvider'
+import { Check, X, Eye } from 'lucide-react'
+import AdminLayout from '@/components/AdminLayout'
+import ContentLoader from '@/components/ContentLoader'
 
 export default function AdminTransactionsPage() {
   const router = useRouter()
+  const toast = useToast()
   const [transactions, setTransactions] = useState<any[]>([])
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [user] = useState({ name: 'Admin', email: 'admin@gicpromoteltd.com' })
+  
+  const logout = () => {
+    localStorage.removeItem('adminToken')
+    localStorage.removeItem('adminUser')
+    router.push('/admin')
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('adminToken')
@@ -26,9 +35,10 @@ export default function AdminTransactionsPage() {
     try {
       const response = await fetch('/api/transactions')
       const data = await response.json()
-      setTransactions(data)
+      setTransactions(Array.isArray(data) ? data : [])
     } catch (error) {
-      toast.error('Erreur lors du chargement')
+      toast.error('Erreur de chargement', 'Impossible de charger les transactions')
+      setTransactions([])
     } finally {
       setLoading(false)
     }
@@ -48,14 +58,14 @@ export default function AdminTransactionsPage() {
       })
 
       if (response.ok) {
-        toast.success(`Transaction ${status === 'APPROVED' ? 'approuvée' : 'rejetée'}`)
+        toast.success('Action réussie', `Transaction ${status === 'APPROVED' ? 'approuvée' : 'rejetée'} avec succès`)
         fetchTransactions()
         setSelectedTransaction(null)
       } else {
-        toast.error('Erreur lors de la mise à jour')
+        toast.error('Erreur de mise à jour', 'Impossible de mettre à jour la transaction')
       }
     } catch (error) {
-      toast.error('Erreur de connexion')
+      toast.error('Erreur de connexion', 'Impossible de communiquer avec le serveur')
     } finally {
       setActionLoading(null)
     }
@@ -71,42 +81,11 @@ export default function AdminTransactionsPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p>Chargement...</p>
-        </div>
-      </div>
-    )
-  }
+
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Image src="/logo.png" alt="GIC Logo" width={32} height={32} />
-              <div>
-                <h1 className="font-bold text-lg">Gestion des Transactions</h1>
-                <p className="text-sm text-gray-600">Administration</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => router.push('/admin')}
-              className="flex items-center text-gray-600 hover:text-primary-600"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Retour au dashboard
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <AdminLayout user={user} onLogout={logout}>
+      <ContentLoader loading={loading}>
         {/* Filters */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex gap-4">
@@ -124,83 +103,137 @@ export default function AdminTransactionsPage() {
           </div>
         </div>
 
-        {/* Transactions Table */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Référence</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expéditeur</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Destinataire</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {transactions.map((transaction) => (
-                  <tr key={transaction.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {transaction.reference}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>
-                        <p className="font-medium">{transaction.senderName}</p>
-                        <p className="text-xs text-gray-400">{transaction.senderCountry?.name}</p>
+        {/* Transactions Cards */}
+        <div className="space-y-4">
+          {(transactions || []).length > 0 ? (
+            (transactions || []).map((transaction) => (
+              <div key={transaction.id} className="bg-white rounded-2xl shadow-lg border border-slate-200 hover:shadow-xl transition-all duration-300 overflow-hidden">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-[#0B3371]/10 rounded-xl flex items-center justify-center">
+                        <svg className="w-6 h-6 text-[#0B3371]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                        </svg>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div>
-                        <p className="font-medium">{transaction.receiverName}</p>
-                        <p className="text-xs text-gray-400">{transaction.receiverCountry?.name}</p>
+                        <h3 className="font-bold text-lg text-[#0B3371]">{transaction.reference}</h3>
+                        <p className="text-sm text-slate-500">{new Date(transaction.createdAt).toLocaleDateString('fr-FR', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}</p>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {transaction.amount} {transaction.senderCountry?.currencyCode}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(transaction.status)}`}>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                        transaction.status === 'PENDING' ? 'bg-orange-100 text-[#F37521] border border-orange-200' :
+                        transaction.status === 'APPROVED' ? 'bg-green-100 text-green-700 border border-green-200' :
+                        'bg-red-100 text-red-700 border border-red-200'
+                      }`}>
                         {transaction.status}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(transaction.createdAt).toLocaleDateString('fr-FR')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => setSelectedTransaction(transaction)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        {transaction.status === 'PENDING' && (
-                          <>
-                            <button
-                              onClick={() => handleAction(transaction.id, 'APPROVED')}
-                              disabled={actionLoading === transaction.id}
-                              className="text-green-600 hover:text-green-900"
-                            >
-                              <Check className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleAction(transaction.id, 'REJECTED')}
-                              disabled={actionLoading === transaction.id}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </>
-                        )}
+                    </div>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-3 gap-6 mb-6">
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Expéditeur</h4>
+                      <div className="bg-slate-50 rounded-xl p-4">
+                        <p className="font-semibold text-[#0B3371]">{transaction.senderName}</p>
+                        <p className="text-sm text-slate-600">{transaction.senderCountry?.name}</p>
+                        <p className="text-xs text-slate-500 mt-1">{transaction.senderEmail}</p>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Destinataire</h4>
+                      <div className="bg-slate-50 rounded-xl p-4">
+                        <p className="font-semibold text-[#0B3371]">{transaction.receiverName}</p>
+                        <p className="text-sm text-slate-600">{transaction.receiverCountry?.name}</p>
+                        <p className="text-xs text-slate-500 mt-1">{transaction.receiverEmail || 'Non fourni'}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Montant</h4>
+                      <div className="bg-[#F37521]/10 rounded-xl p-4 border border-[#F37521]/20">
+                        <p className="text-2xl font-bold text-[#F37521]">{transaction.amount}</p>
+                        <p className="text-sm text-slate-600">{transaction.senderCountry?.currencyCode}</p>
+                        <p className="text-xs text-slate-500 mt-1">Frais: {transaction.fees || 0}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-[#F37521] rounded-full"></div>
+                      <span className="text-sm text-slate-600">Méthode: {transaction.paymentMethod?.name || 'N/A'}</span>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setSelectedTransaction(transaction)}
+                        className="flex items-center space-x-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span className="text-sm font-medium">Détails</span>
+                      </button>
+                      
+                      {transaction.status === 'PENDING' && (
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleAction(transaction.id, 'APPROVED')}
+                            disabled={actionLoading === transaction.id}
+                            className="flex items-center space-x-2 px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-xl transition-colors disabled:opacity-50"
+                          >
+                            {actionLoading === transaction.id ? (
+                              <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <Check className="w-4 h-4" />
+                            )}
+                            <span className="text-sm font-medium">
+                              {actionLoading === transaction.id ? 'Traitement...' : 'Approuver'}
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => handleAction(transaction.id, 'REJECTED')}
+                            disabled={actionLoading === transaction.id}
+                            className="flex items-center space-x-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-xl transition-colors disabled:opacity-50"
+                          >
+                            {actionLoading === transaction.id ? (
+                              <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <X className="w-4 h-4" />
+                            )}
+                            <span className="text-sm font-medium">
+                              {actionLoading === transaction.id ? 'Traitement...' : 'Rejeter'}
+                            </span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-12 text-center">
+              <div className="w-24 h-24 bg-gradient-to-br from-[#0B3371]/10 to-[#F37521]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <svg className="w-12 h-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-[#0B3371] mb-3">Aucune transaction trouvée</h3>
+              <p className="text-slate-500 max-w-md mx-auto mb-6">Les transactions apparaîtront ici une fois que les utilisateurs commenceront à effectuer des transferts d'argent.</p>
+              <div className="inline-flex items-center space-x-2 text-sm text-[#F37521]">
+                <div className="w-2 h-2 bg-[#F37521] rounded-full animate-pulse"></div>
+                <span>En attente de nouvelles transactions...</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Transaction Detail Modal */}
@@ -295,7 +328,7 @@ export default function AdminTransactionsPage() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </ContentLoader>
+    </AdminLayout>
   )
 }

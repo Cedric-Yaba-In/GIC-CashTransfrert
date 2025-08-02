@@ -29,6 +29,16 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       }
     })
 
+    // Update wallet balances if transaction is approved
+    if (status === 'APPROVED') {
+      await updateWalletBalances(
+        transaction.senderCountryId,
+        transaction.receiverCountryId,
+        transaction.paymentMethodId,
+        transaction.amount.toNumber()
+      )
+    }
+
     await prisma.auditLog.create({
       data: {
         userId: user.id,

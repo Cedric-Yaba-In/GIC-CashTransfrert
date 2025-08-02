@@ -16,13 +16,7 @@ export async function POST(request: Request) {
 
     const token = generateToken(user.id)
 
-    await prisma.auditLog.create({
-      data: {
-        userId: user.id,
-        action: 'LOGIN',
-        details: { email },
-      }
-    })
+    // Note: AuditLog table not in simplified schema
 
     return NextResponse.json({
       token,

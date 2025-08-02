@@ -5,8 +5,8 @@ import { fetchCountryData, formatCountryForDB } from '@/lib/countries'
 export async function GET() {
   try {
     const countries = await prisma.country.findMany({
-      where: { active: true },
       include: {
+        region: true,
         paymentMethods: {
           include: {
             paymentMethod: true
@@ -18,39 +18,61 @@ export async function GET() {
 
     return NextResponse.json(countries)
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch countries' }, { status: 500 })
+    console.error('Countries API Error:', error)
+    return NextResponse.json([])
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const { countryCode } = await request.json()
+    const { countries } = await request.json()
     
-    const countryData = await fetchCountryData(countryCode)
-    if (!countryData.length) {
-      return NextResponse.json({ error: 'Country not found' }, { status: 404 })
+    const createdCountries = []
+    
+    for (const countryData of countries) {
+      const formattedCountry = formatCountryForDB(countryData)
+      
+      // Find or create region
+      const region = await prisma.region.upsert({
+        where: { name: formattedCountry.region },
+        update: {},
+        create: {
+          name: formattedCountry.region,
+          code: formattedCountry.region.toLowerCase(),
+          active: true
+        }
+      })
+      
+      const country = await prisma.country.upsert({
+        where: { code: formattedCountry.code },
+        update: {
+          name: formattedCountry.name,
+          currency: formattedCountry.currency,
+          currencyCode: formattedCountry.currencyCode,
+          flag: formattedCountry.flag,
+          callingCode: formattedCountry.callingCode,
+          regionId: region.id
+        },
+        create: {
+          name: formattedCountry.name,
+          code: formattedCountry.code,
+          currency: formattedCountry.currency,
+          currencyCode: formattedCountry.currencyCode,
+          flag: formattedCountry.flag,
+          callingCode: formattedCountry.callingCode,
+          regionId: region.id,
+          active: true
+        },
+      })
+
+
+      
+      createdCountries.push(country)
     }
 
-    const formattedCountry = formatCountryForDB(countryData[0])
-    
-    const country = await prisma.country.upsert({
-      where: { code: formattedCountry.code },
-      update: formattedCountry,
-      create: formattedCountry,
-    })
-
-    // Create wallet for the country
-    await prisma.wallet.upsert({
-      where: { countryId: country.id },
-      update: {},
-      create: {
-        countryId: country.id,
-        balance: 0,
-      },
-    })
-
-    return NextResponse.json(country)
+    return NextResponse.json(createdCountries)
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create country' }, { status: 500 })
+    console.error('Countries creation error:', error)
+    return NextResponse.json({ error: 'Failed to create countries' }, { status: 500 })
   }
 }

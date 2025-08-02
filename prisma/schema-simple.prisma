@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique @db.VarChar(191)
+  password  String   @db.VarChar(191)
+  role      UserRole @default(ADMIN)
+  name      String   @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Region {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(100)
+  code      String   @unique @db.VarChar(50)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  countries Country[]
+
+  @@map("regions")
+}
+
+model Country {
+  id           Int     @id @default(autoincrement())
+  name         String  @db.VarChar(191)
+  code         String  @unique @db.VarChar(10)
+  currency     String  @db.VarChar(100)
+  currencyCode String  @db.VarChar(10)
+  flag         String  @db.VarChar(191)
+  regionId     Int?
+  active       Boolean @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  region Region? @relation(fields: [regionId], references: [id])
+
+  @@map("countries")
+}
+
+model PaymentMethod {
+  id          Int               @id @default(autoincrement())
+  name        String            @db.VarChar(191)
+  type        PaymentMethodType
+  minAmount   Decimal           @default(0)
+  maxAmount   Decimal?
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@map("payment_methods")
+}
+
+model Transaction {
+  id                Int               @id @default(autoincrement())
+  reference         String            @unique @db.VarChar(100)
+  senderName        String            @db.VarChar(191)
+  senderEmail       String            @db.VarChar(191)
+  senderPhone       String            @db.VarChar(50)
+  senderCountryId   Int
+  receiverName      String            @db.VarChar(191)
+  receiverEmail     String?           @db.VarChar(191)
+  receiverPhone     String            @db.VarChar(50)
+  receiverCountryId Int
+  amount            Decimal
+  fees              Decimal           @default(0)
+  totalAmount       Decimal
+  paymentMethodId   Int
+  status            TransactionStatus @default(PENDING)
+  paymentProof      String?           @db.VarChar(191)
+  adminNotes        String?           @db.Text
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@map("transactions")
+}
+
+enum UserRole {
+  ADMIN
+  VIEWER
+}
+
+enum PaymentMethodType {
+  API
+  MANUAL
+  FLUTTERWAVE
+  MOBILE_MONEY
+  BANK_TRANSFER
+}
+
+enum TransactionStatus {
+  PENDING
+  PAID
+  APPROVED
+  REJECTED
+  COMPLETED
+  FAILED
+}

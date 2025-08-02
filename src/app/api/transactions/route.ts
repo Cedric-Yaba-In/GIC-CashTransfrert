@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { generateTransactionReference } from '@/lib/utils'
-import { sendEmail, getTransactionEmailTemplate } from '@/lib/email'
-import { sendSMS, getTransactionSMSMessage } from '@/lib/sms'
+
+function generateTransactionReference(): string {
+  const timestamp = Date.now().toString(36)
+  const random = Math.random().toString(36).substring(2, 8)
+  return `GIC${timestamp}${random}`.toUpperCase()
+}
 
 export async function POST(request: Request) {
   try {
     const data = await request.json()
-    
     const reference = generateTransactionReference()
     
     const transaction = await prisma.transaction.create({
@@ -24,13 +26,15 @@ export async function POST(request: Request) {
         amount: data.amount,
         fees: data.fees || 0,
         totalAmount: data.totalAmount,
-        paymentMethodId: data.paymentMethodId,
+        senderPaymentMethodId: data.senderPaymentMethodId || data.paymentMethodId,
+        receiverPaymentMethodId: data.receiverPaymentMethodId,
         status: 'PENDING',
       },
       include: {
         senderCountry: true,
         receiverCountry: true,
-        paymentMethod: true,
+        senderPaymentMethod: true,
+        receiverPaymentMethod: true,
       }
     })
 
@@ -42,18 +46,6 @@ export async function POST(request: Request) {
         status: 'OPEN',
       }
     })
-
-    // Send confirmation email
-    await sendEmail({
-      to: transaction.senderEmail,
-      subject: `Confirmation de transaction ${reference}`,
-      html: getTransactionEmailTemplate(transaction, 'created'),
-    })
-
-    // Send SMS if phone provided
-    if (transaction.senderPhone) {
-      await sendSMS(transaction.senderPhone, getTransactionSMSMessage(transaction))
-    }
 
     return NextResponse.json({ transaction, reference })
   } catch (error) {
@@ -73,7 +65,8 @@ export async function GET(request: Request) {
         include: {
           senderCountry: true,
           receiverCountry: true,
-          paymentMethod: true,
+          senderPaymentMethod: true,
+          receiverPaymentMethod: true,
         }
       })
       
@@ -88,13 +81,15 @@ export async function GET(request: Request) {
       include: {
         senderCountry: true,
         receiverCountry: true,
-        paymentMethod: true,
+        senderPaymentMethod: true,
+        receiverPaymentMethod: true,
       },
       orderBy: { createdAt: 'desc' }
     })
 
     return NextResponse.json(transactions)
   } catch (error) {
+    console.error('Transaction fetch error:', error)
     return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
   }
 }

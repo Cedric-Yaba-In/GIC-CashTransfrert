@@ -8,174 +8,163 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
+  id        Int      @id @default(autoincrement())
+  email     String   @unique @db.VarChar(191)
+  password  String   @db.VarChar(191)
   role      UserRole @default(ADMIN)
-  name      String
+  name      String   @db.VarChar(191)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  auditLogs AuditLog[]
-  tickets   Ticket[]
 
   @@map("users")
 }
 
+model Region {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(100)
+  code      String   @unique @db.VarChar(50)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  countries Country[]
+
+  @@map("regions")
+}
+
 model Country {
-  id           String @id @default(cuid())
-  name         String
-  code         String @unique
-  currency     String
-  currencyCode String
-  flag         String
+  id           Int     @id @default(autoincrement())
+  name         String  @db.VarChar(191)
+  code         String  @unique @db.VarChar(10)
+  currency     String  @db.VarChar(100)
+  currencyCode String  @db.VarChar(10)
+  flag         String  @db.VarChar(191)
+  callingCode  String? @db.VarChar(10)
+  regionId     Int?
   active       Boolean @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  wallets            Wallet[]
-  paymentMethods     CountryPaymentMethod[]
-  senderTransactions Transaction[] @relation("SenderCountry")
-  receiverTransactions Transaction[] @relation("ReceiverCountry")
+  region Region? @relation(fields: [regionId], references: [id])
+  paymentMethods CountryPaymentMethod[]
+  wallet Wallet?
+  senderTransactions Transaction[] @relation("SenderTransactions")
+  receiverTransactions Transaction[] @relation("ReceiverTransactions")
 
   @@map("countries")
 }
 
 model PaymentMethod {
-  id          String            @id @default(cuid())
-  name        String
+  id          Int               @id @default(autoincrement())
+  name        String            @db.VarChar(191)
   type        PaymentMethodType
-  apiConfig   Json?
   minAmount   Decimal           @default(0)
   maxAmount   Decimal?
   active      Boolean           @default(true)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
-  countries    CountryPaymentMethod[]
-  subWallets   SubWallet[]
-  transactions Transaction[]
+  countries CountryPaymentMethod[]
+  senderTransactions Transaction[] @relation("SenderPaymentTransactions")
+  receiverTransactions Transaction[] @relation("ReceiverPaymentTransactions")
 
   @@map("payment_methods")
 }
 
-model CountryPaymentMethod {
-  id              String @id @default(cuid())
-  countryId       String
-  paymentMethodId String
-  active          Boolean @default(true)
-  minAmount       Decimal @default(0)
-  maxAmount       Decimal?
-  createdAt       DateTime @default(now())
+model Transaction {
+  id                    Int               @id @default(autoincrement())
+  reference             String            @unique @db.VarChar(100)
+  senderName            String            @db.VarChar(191)
+  senderEmail           String            @db.VarChar(191)
+  senderPhone           String            @db.VarChar(50)
+  senderCountryId       Int
+  receiverName          String            @db.VarChar(191)
+  receiverEmail         String?           @db.VarChar(191)
+  receiverPhone         String            @db.VarChar(50)
+  receiverCountryId     Int
+  amount                Decimal
+  fees                  Decimal           @default(0)
+  totalAmount           Decimal
+  senderPaymentMethodId Int
+  receiverPaymentMethodId Int?
+  status                TransactionStatus @default(PENDING)
+  paymentProof          String?           @db.VarChar(191)
+  adminNotes            String?           @db.Text
+  sentAt                DateTime?
+  receivedAt            DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
-  country       Country       @relation(fields: [countryId], references: [id])
-  paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  senderCountry         Country           @relation("SenderTransactions", fields: [senderCountryId], references: [id])
+  receiverCountry       Country           @relation("ReceiverTransactions", fields: [receiverCountryId], references: [id])
+  senderPaymentMethod   PaymentMethod     @relation("SenderPaymentTransactions", fields: [senderPaymentMethodId], references: [id])
+  receiverPaymentMethod PaymentMethod?    @relation("ReceiverPaymentTransactions", fields: [receiverPaymentMethodId], references: [id])
+  tickets               Ticket[]
+
+  @@map("transactions")
+}
+
+model CountryPaymentMethod {
+  id              Int     @id @default(autoincrement())
+  countryId       Int
+  paymentMethodId Int
+  active          Boolean @default(true)
+  minAmount       Decimal?
+  maxAmount       Decimal?
+  fees            Decimal @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  country       Country       @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id], onDelete: Cascade)
+  subWallet     SubWallet?
 
   @@unique([countryId, paymentMethodId])
   @@map("country_payment_methods")
 }
 
 model Wallet {
-  id        String    @id @default(cuid())
-  countryId String
-  balance   Decimal   @default(0)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id        Int      @id @default(autoincrement())
+  countryId Int      @unique
+  balance   Decimal  @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  country    Country     @relation(fields: [countryId], references: [id])
+  country    Country     @relation(fields: [countryId], references: [id], onDelete: Cascade)
   subWallets SubWallet[]
 
-  @@unique([countryId])
   @@map("wallets")
 }
 
 model SubWallet {
-  id              String  @id @default(cuid())
-  walletId        String
-  paymentMethodId String
-  balance         Decimal @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                      Int     @id @default(autoincrement())
+  walletId                Int
+  countryPaymentMethodId  Int     @unique
+  balance                 Decimal @default(0)
+  active                  Boolean @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
-  wallet        Wallet        @relation(fields: [walletId], references: [id])
-  paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  wallet                Wallet                @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  countryPaymentMethod  CountryPaymentMethod  @relation(fields: [countryPaymentMethodId], references: [id], onDelete: Cascade)
 
-  @@unique([walletId, paymentMethodId])
   @@map("sub_wallets")
 }
 
-model Transaction {
-  id                String            @id @default(cuid())
-  reference         String            @unique
-  senderName        String
-  senderEmail       String
-  senderPhone       String
-  senderCountryId   String
-  receiverName      String
-  receiverEmail     String?
-  receiverPhone     String
-  receiverCountryId String
-  amount            Decimal
-  fees              Decimal           @default(0)
-  totalAmount       Decimal
-  paymentMethodId   String
-  status            TransactionStatus @default(PENDING)
-  paymentProof      String?
-  adminNotes        String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+model Configuration {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique @db.VarChar(100)
+  value     String?  @db.Text
+  category  String   @db.VarChar(50)
+  type      String   @db.VarChar(20)
+  label     String   @db.VarChar(191)
+  required  Boolean  @default(false)
+  encrypted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  senderCountry   Country       @relation("SenderCountry", fields: [senderCountryId], references: [id])
-  receiverCountry Country       @relation("ReceiverCountry", fields: [receiverCountryId], references: [id])
-  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
-  ticket          Ticket?
-  auditLogs       AuditLog[]
-
-  @@map("transactions")
-}
-
-model Ticket {
-  id            String       @id @default(cuid())
-  transactionId String       @unique
-  userId        String?
-  status        TicketStatus @default(OPEN)
-  subject       String
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-
-  transaction Transaction    @relation(fields: [transactionId], references: [id])
-  user        User?          @relation(fields: [userId], references: [id])
-  messages    TicketMessage[]
-
-  @@map("tickets")
-}
-
-model TicketMessage {
-  id        String    @id @default(cuid())
-  ticketId  String
-  message   String    @db.Text
-  isAdmin   Boolean   @default(false)
-  createdAt DateTime  @default(now())
-
-  ticket Ticket @relation(fields: [ticketId], references: [id])
-
-  @@map("ticket_messages")
-}
-
-model AuditLog {
-  id            String   @id @default(cuid())
-  userId        String?
-  transactionId String?
-  action        String
-  details       Json?
-  ipAddress     String?
-  userAgent     String?
-  createdAt     DateTime @default(now())
-
-  user        User?        @relation(fields: [userId], references: [id])
-  transaction Transaction? @relation(fields: [transactionId], references: [id])
-
-  @@map("audit_logs")
+  @@map("configurations")
 }
 
 enum UserRole {
@@ -200,8 +189,39 @@ enum TransactionStatus {
   FAILED
 }
 
+model Ticket {
+  id            Int         @id @default(autoincrement())
+  transactionId Int?
+  subject       String      @db.VarChar(191)
+  message       String?     @db.Text
+  status        TicketStatus @default(OPEN)
+  priority      TicketPriority @default(NORMAL)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+
+  @@map("tickets")
+}
+
+enum ConfigType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+  PASSWORD
+}
+
 enum TicketStatus {
   OPEN
   IN_PROGRESS
+  RESOLVED
   CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
 }
