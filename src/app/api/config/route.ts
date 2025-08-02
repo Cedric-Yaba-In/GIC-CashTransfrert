@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { ConfigService } from '@/lib/config'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const configs = await ConfigService.getAll()

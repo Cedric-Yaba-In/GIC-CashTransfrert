@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 function generateTransactionReference(): string {
   const timestamp = Date.now().toString(36)
   const random = Math.random().toString(36).substring(2, 8)

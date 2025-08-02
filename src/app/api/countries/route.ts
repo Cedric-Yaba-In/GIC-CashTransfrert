@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { fetchCountryData, formatCountryForDB } from '@/lib/countries'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const countries = await prisma.country.findMany({
