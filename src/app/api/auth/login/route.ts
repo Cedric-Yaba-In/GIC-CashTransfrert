@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    const token = generateToken(user.id)
+    const token = generateToken(user.id.toString())
 
     // Note: AuditLog table not in simplified schema
 

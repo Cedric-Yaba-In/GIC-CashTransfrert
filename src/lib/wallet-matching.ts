@@ -1,21 +1,21 @@
 import { prisma } from './prisma'
 
 export interface PaymentMethodAvailability {
-  paymentMethodId: string
+  paymentMethodId: number
   paymentMethodName: string
   paymentMethodType: string
   available: boolean
   balance: number
   minAmount: number
   maxAmount: number | null
-  countryId: string
+  countryId: number
   countryName: string
   currencyCode: string
 }
 
 export async function getAvailablePaymentMethods(
-  senderCountryId: string,
-  receiverCountryId: string,
+  senderCountryId: number,
+  receiverCountryId: number,
   amount: number
 ): Promise<PaymentMethodAvailability[]> {
   try {
@@ -31,9 +31,7 @@ export async function getAvailablePaymentMethods(
         ]
       },
       include: {
-        paymentMethod: {
-          where: { active: true }
-        },
+        paymentMethod: true,
         country: true
       }
     })
@@ -45,8 +43,10 @@ export async function getAvailablePaymentMethods(
         country: true,
         subWallets: {
           include: {
-            paymentMethod: {
-              where: { active: true }
+            countryPaymentMethod: {
+              include: {
+                paymentMethod: true
+              }
             }
           }
         }
@@ -60,11 +60,11 @@ export async function getAvailablePaymentMethods(
     const availableMethods: PaymentMethodAvailability[] = []
 
     for (const senderMethod of senderCountryMethods) {
-      if (!senderMethod.paymentMethod) continue
+      if (!senderMethod.paymentMethod || !senderMethod.paymentMethod.active) continue
 
       // Check if receiver country has sufficient balance for this payment method
       const receiverSubWallet = receiverWallet.subWallets.find(
-        sw => sw.paymentMethodId === senderMethod.paymentMethodId
+        sw => sw.countryPaymentMethod.paymentMethodId === senderMethod.paymentMethodId
       )
 
       const hasBalance = receiverSubWallet ? receiverSubWallet.balance.toNumber() >= amount : false
@@ -75,7 +75,7 @@ export async function getAvailablePaymentMethods(
         paymentMethodType: senderMethod.paymentMethod.type,
         available: hasBalance,
         balance: receiverSubWallet?.balance.toNumber() || 0,
-        minAmount: senderMethod.minAmount.toNumber(),
+        minAmount: senderMethod.minAmount?.toNumber() || 0,
         maxAmount: senderMethod.maxAmount?.toNumber() || null,
         countryId: senderMethod.countryId,
         countryName: senderMethod.country.name,
@@ -97,8 +97,8 @@ export async function getAvailablePaymentMethods(
 }
 
 export async function checkWalletBalance(
-  countryId: string,
-  paymentMethodId: string,
+  countryId: number,
+  paymentMethodId: number,
   amount: number
 ): Promise<boolean> {
   try {
@@ -106,7 +106,11 @@ export async function checkWalletBalance(
       where: { countryId },
       include: {
         subWallets: {
-          where: { paymentMethodId }
+          where: {
+            countryPaymentMethod: {
+              paymentMethodId
+            }
+          }
         }
       }
     })
@@ -123,9 +127,9 @@ export async function checkWalletBalance(
 }
 
 export async function updateWalletBalances(
-  senderCountryId: string,
-  receiverCountryId: string,
-  paymentMethodId: string,
+  senderCountryId: number,
+  receiverCountryId: number,
+  paymentMethodId: number,
   amount: number
 ) {
   try {
@@ -133,7 +137,15 @@ export async function updateWalletBalances(
       // Debit receiver country sub-wallet
       const receiverWallet = await tx.wallet.findUnique({
         where: { countryId: receiverCountryId },
-        include: { subWallets: { where: { paymentMethodId } } }
+        include: {
+          subWallets: {
+            where: {
+              countryPaymentMethod: {
+                paymentMethodId
+              }
+            }
+          }
+        }
       })
 
       if (receiverWallet && receiverWallet.subWallets.length > 0) {
@@ -153,7 +165,15 @@ export async function updateWalletBalances(
       // Credit sender country sub-wallet (for future transfers)
       const senderWallet = await tx.wallet.findUnique({
         where: { countryId: senderCountryId },
-        include: { subWallets: { where: { paymentMethodId } } }
+        include: {
+          subWallets: {
+            where: {
+              countryPaymentMethod: {
+                paymentMethodId
+              }
+            }
+          }
+        }
       })
 
       if (senderWallet) {
@@ -164,11 +184,26 @@ export async function updateWalletBalances(
             data: { balance: { increment: amount } }
           })
         } else {
-          // Create sub-wallet if it doesn't exist
+          // Create CountryPaymentMethod first if needed
+          const countryPaymentMethod = await tx.countryPaymentMethod.upsert({
+            where: {
+              countryId_paymentMethodId: {
+                countryId: senderCountryId,
+                paymentMethodId
+              }
+            },
+            create: {
+              countryId: senderCountryId,
+              paymentMethodId,
+              active: true
+            },
+            update: {}
+          })
+          
           await tx.subWallet.create({
             data: {
               walletId: senderWallet.id,
-              paymentMethodId,
+              countryPaymentMethodId: countryPaymentMethod.id,
               balance: amount
             }
           })

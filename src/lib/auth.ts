@@ -29,7 +29,7 @@ export async function getCurrentUser(token?: string) {
   if (!decoded) return null
 
   return prisma.user.findUnique({
-    where: { id: decoded.userId },
+    where: { id: parseInt(decoded.userId) },
     select: { id: true, email: true, name: true, role: true }
   })
 }

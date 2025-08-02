@@ -177,7 +177,7 @@ export default function ConfigPage() {
   }
 
   const testService = async (category: string) => {
-    setTestingServices(prev => new Set([...prev, category]))
+    setTestingServices(prev => new Set(Array.from(prev).concat(category)))
     
     try {
       const response = await fetch(`/api/config/test/${category}`, {
@@ -187,10 +187,10 @@ export default function ConfigPage() {
       
       const result = await response.json()
       
-      setTestResults(prev => new Map([...prev, [category, {
+      setTestResults(prev => new Map(Array.from(prev).concat([[category, {
         success: response.ok,
         message: result.message || (response.ok ? 'Test réussi' : 'Test échoué')
-      }]]))
+      }]])))
       
       if (response.ok) {
         toast.success('Test réussi', `La configuration ${category} fonctionne correctement`)
@@ -198,14 +198,14 @@ export default function ConfigPage() {
         toast.error('Test échoué', `${category}: ${result.message}`)
       }
     } catch (error) {
-      setTestResults(prev => new Map([...prev, [category, {
+      setTestResults(prev => new Map(Array.from(prev).concat([[category, {
         success: false,
         message: 'Erreur de connexion'
-      }]]))
+      }]])))
       toast.error('Erreur de test', `Impossible de tester la configuration ${category}`)
     } finally {
       setTestingServices(prev => {
-        const newSet = new Set(prev)
+        const newSet = new Set(Array.from(prev))
         newSet.delete(category)
         return newSet
       })

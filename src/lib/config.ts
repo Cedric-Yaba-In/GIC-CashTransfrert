@@ -48,17 +48,19 @@ export class ConfigService {
       }
 
       // Type conversion
+      let convertedValue: any = value
       if (config.type === 'NUMBER' && value) {
-        value = parseFloat(value)
+        convertedValue = parseFloat(value)
       } else if (config.type === 'BOOLEAN' && value) {
-        value = value.toLowerCase() === 'true'
+        convertedValue = value.toLowerCase() === 'true'
       } else if (config.type === 'JSON' && value) {
         try {
-          value = JSON.parse(value)
+          convertedValue = JSON.parse(value)
         } catch {
-          value = defaultValue
+          convertedValue = defaultValue
         }
       }
+      value = convertedValue
 
       this.cache.set(key, value)
       return value ?? defaultValue

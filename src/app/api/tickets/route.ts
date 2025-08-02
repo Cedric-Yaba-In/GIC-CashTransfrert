@@ -7,24 +7,22 @@ export async function POST(request: Request) {
 
     const transaction = await prisma.transaction.findUnique({
       where: { reference: transactionReference },
-      include: { ticket: { include: { messages: true } } }
+      include: { tickets: true }
     })
 
     if (!transaction || transaction.senderEmail !== email) {
       return NextResponse.json({ error: 'Transaction not found or email mismatch' }, { status: 404 })
     }
 
-    if (transaction.ticket) {
-      // Add message to existing ticket
-      const newMessage = await prisma.ticketMessage.create({
-        data: {
-          ticketId: transaction.ticket.id,
-          message,
-          isAdmin: false,
-        }
+    const ticket = transaction.tickets[0]
+    if (ticket) {
+      // Update existing ticket with new message
+      const updatedTicket = await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { message: message }
       })
 
-      return NextResponse.json({ ticket: transaction.ticket, newMessage })
+      return NextResponse.json({ ticket: updatedTicket })
     } else {
       return NextResponse.json({ error: 'No ticket found' }, { status: 404 })
     }
@@ -45,22 +43,14 @@ export async function GET(request: Request) {
 
     const transaction = await prisma.transaction.findUnique({
       where: { reference },
-      include: {
-        ticket: {
-          include: {
-            messages: {
-              orderBy: { createdAt: 'asc' }
-            }
-          }
-        }
-      }
+      include: { tickets: true }
     })
 
     if (!transaction || transaction.senderEmail !== email) {
       return NextResponse.json({ error: 'Transaction not found or email mismatch' }, { status: 404 })
     }
 
-    return NextResponse.json(transaction.ticket)
+    return NextResponse.json(transaction.tickets[0] || null)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch ticket' }, { status: 500 })
   }

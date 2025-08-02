@@ -40,7 +40,7 @@ async function testEmailService() {
     })
 
     const config = emailConfigs.reduce((acc, item) => {
-      acc[item.key] = item.value
+      acc[item.key] = item.value || ''
       return acc
     }, {} as Record<string, string>)
 
@@ -51,7 +51,7 @@ async function testEmailService() {
       )
     }
 
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       host: config.EMAIL_HOST,
       port: parseInt(config.EMAIL_PORT || '587'),
       secure: false,
@@ -81,7 +81,7 @@ async function testSMSService() {
     })
 
     const config = smsConfigs.reduce((acc, item) => {
-      acc[item.key] = item.value
+      acc[item.key] = item.value || ''
       return acc
     }, {} as Record<string, string>)
 
@@ -123,7 +123,7 @@ async function testPaymentService() {
     })
 
     const config = paymentConfigs.reduce((acc, item) => {
-      acc[item.key] = item.value
+      acc[item.key] = item.value || ''
       return acc
     }, {} as Record<string, string>)
 
@@ -165,7 +165,7 @@ async function testAPIService() {
     })
 
     const config = apiConfigs.reduce((acc, item) => {
-      acc[item.key] = item.value
+      acc[item.key] = item.value || ''
       return acc
     }, {} as Record<string, string>)
 

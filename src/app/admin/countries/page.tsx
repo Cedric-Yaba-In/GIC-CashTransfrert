@@ -14,7 +14,7 @@ interface Country {
   currency: string
   currencyCode: string
   flag: string
-  region: string
+  region?: { name: string; id: number; code: string }
   callingCode: string
   active: boolean
   paymentMethods: any[]
@@ -220,7 +220,8 @@ export default function AdminCountriesPage() {
   }
 
   const getUniqueRegions = () => {
-    const regions = [...new Set(countries.map(c => c.region?.name).filter(Boolean))]
+    const regionNames = countries.map(c => c.region?.name).filter(Boolean) as string[]
+    const regions = Array.from(new Set(regionNames))
     return regions.sort()
   }
 
