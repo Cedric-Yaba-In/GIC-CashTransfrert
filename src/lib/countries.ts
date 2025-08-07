@@ -42,7 +42,17 @@ export async function fetchCountryData(countryCode?: string): Promise<CountryDat
 
 export async function fetchCountriesByRegion(region: string): Promise<CountryData[]> {
   try {
-    const response = await axios.get(`https://restcountries.com/v3.1/region/${region}?fields=name,cca2,currencies,flags,region,subregion,idd`)
+    // Mapper les noms de régions français vers les noms anglais de l'API
+    const regionMapping: Record<string, string> = {
+      'afrique': 'africa',
+      'europe': 'europe',
+      'amériques': 'americas',
+      'asie': 'asia',
+      'océanie': 'oceania'
+    }
+    
+    const englishRegion = regionMapping[region.toLowerCase()] || region
+    const response = await axios.get(`https://restcountries.com/v3.1/region/${englishRegion}?fields=name,cca2,currencies,flags,region,subregion,idd`)
     return response.data
   } catch (error) {
     console.error('Error fetching countries by region:', error)

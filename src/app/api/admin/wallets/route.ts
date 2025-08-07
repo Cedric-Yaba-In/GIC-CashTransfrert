@@ -79,6 +79,13 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'SubWallet not found' }, { status: 404 })
     }
 
+    // Vérifier si le wallet est en lecture seule (Flutterwave)
+    if (subWallet.readOnly === true) {
+      return NextResponse.json({ 
+        error: 'Opération non autorisée sur un wallet Flutterwave. Le solde est synchronisé automatiquement.' 
+      }, { status: 403 })
+    }
+
     const currentBalance = subWallet.balance.toNumber()
     const newBalance = operation === 'credit' 
       ? currentBalance + amount

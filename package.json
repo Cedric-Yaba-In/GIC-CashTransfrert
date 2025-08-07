@@ -12,7 +12,11 @@
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "db:reset": "node scripts/reset-database.js",
+    "setup:new-structure": "scripts/setup-new-structure.bat",
+    "test:categories": "node test-payment-categories.js",
+    "test:init-db": "node test-init-db.js"
   },
   "dependencies": {
     "next": "^14.0.0",

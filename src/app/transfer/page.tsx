@@ -8,6 +8,7 @@ import { useForm } from 'react-hook-form'
 import { useToast } from '@/components/ToastProvider'
 import { ArrowLeft, Send, User, Mail, Phone, MapPin, CreditCard, CheckCircle, AlertCircle, Globe, DollarSign } from 'lucide-react'
 import PhoneInput from '../../components/PhoneInput'
+import CountrySelect from '../../components/CountrySelect'
 
 interface Region {
   id: string
@@ -318,18 +319,25 @@ export default function TransferPage() {
                         <MapPin className="h-4 w-4 mr-2 text-gray-500" />
                         Pays *
                       </label>
-                      <select
-                        {...register('senderCountryId', { required: 'Pays requis' })}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm disabled:opacity-50"
+                      <CountrySelect
+                        countries={senderCountries}
+                        value={senderCountryId || ''}
+                        onChange={(value) => {
+                          setValue('senderCountryId', value)
+                          // Déclencher la validation
+                          if (value) {
+                            setValue('senderCountryId', value, { shouldValidate: true })
+                          }
+                        }}
+                        placeholder="Sélectionner un pays"
                         disabled={!senderRegion}
-                      >
-                        <option value="">Sélectionner un pays</option>
-                        {senderCountries.map(country => (
-                          <option key={country.id} value={country.id}>
-                            {country.flag} {country.name} ({country.currencyCode})
-                          </option>
-                        ))}
-                      </select>
+                        error={errors.senderCountryId?.message}
+                      />
+                      <input
+                        {...register('senderCountryId', { required: 'Pays requis' })}
+                        type="hidden"
+                        value={senderCountryId || ''}
+                      />
                       {errors.senderCountryId && (
                         <p className="text-red-500 text-sm flex items-center mt-1">
                           <AlertCircle className="h-4 w-4 mr-1" />
@@ -424,18 +432,25 @@ export default function TransferPage() {
                         <MapPin className="h-4 w-4 mr-2 text-gray-500" />
                         Pays de destination *
                       </label>
-                      <select
-                        {...register('receiverCountryId', { required: 'Pays requis' })}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm disabled:opacity-50"
+                      <CountrySelect
+                        countries={receiverCountries}
+                        value={receiverCountryId || ''}
+                        onChange={(value) => {
+                          setValue('receiverCountryId', value)
+                          // Déclencher la validation
+                          if (value) {
+                            setValue('receiverCountryId', value, { shouldValidate: true })
+                          }
+                        }}
+                        placeholder="Sélectionner un pays"
                         disabled={!receiverRegion}
-                      >
-                        <option value="">Sélectionner un pays</option>
-                        {receiverCountries.map(country => (
-                          <option key={country.id} value={country.id}>
-                            {country.flag} {country.name} ({country.currencyCode})
-                          </option>
-                        ))}
-                      </select>
+                        error={errors.receiverCountryId?.message}
+                      />
+                      <input
+                        {...register('receiverCountryId', { required: 'Pays requis' })}
+                        type="hidden"
+                        value={receiverCountryId || ''}
+                      />
                       {errors.receiverCountryId && (
                         <p className="text-red-500 text-sm flex items-center mt-1">
                           <AlertCircle className="h-4 w-4 mr-1" />

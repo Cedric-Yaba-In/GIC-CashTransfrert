@@ -1,13 +1,43 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/auth'
+// Import direct des données de banques
+const bankSeeds = [
+  // France
+  { name: 'BNP Paribas', code: 'BNPPARIBAS', countryCode: 'FR', logo: 'https://logos-world.net/wp-content/uploads/2021/02/BNP-Paribas-Logo.png', website: 'https://www.bnpparibas.fr', swiftCode: 'BNPAFRPP', source: 'MANUAL' },
+  { name: 'Crédit Agricole', code: 'CREDITAGRICOLE', countryCode: 'FR', logo: 'https://logos-world.net/wp-content/uploads/2021/02/Credit-Agricole-Logo.png', website: 'https://www.credit-agricole.fr', swiftCode: 'AGRIFRPP', source: 'MANUAL' },
+  { name: 'Société Générale', code: 'SOCIETEGENERALE', countryCode: 'FR', logo: 'https://logos-world.net/wp-content/uploads/2021/02/Societe-Generale-Logo.png', website: 'https://www.societegenerale.fr', swiftCode: 'SOGEFRPP', source: 'MANUAL' },
+  
+  // États-Unis
+  { name: 'JPMorgan Chase', code: 'CHASE', countryCode: 'US', logo: 'https://logos-world.net/wp-content/uploads/2021/02/JPMorgan-Chase-Logo.png', website: 'https://www.chase.com', swiftCode: 'CHASUS33', routingNumber: '021000021', source: 'MANUAL' },
+  { name: 'Bank of America', code: 'BOA', countryCode: 'US', logo: 'https://logos-world.net/wp-content/uploads/2021/02/Bank-of-America-Logo.png', website: 'https://www.bankofamerica.com', swiftCode: 'BOFAUS3N', routingNumber: '011000138', source: 'MANUAL' },
+  
+  // Royaume-Uni
+  { name: 'Barclays', code: 'BARCLAYS', countryCode: 'GB', logo: 'https://logos-world.net/wp-content/uploads/2021/02/Barclays-Logo.png', website: 'https://www.barclays.co.uk', swiftCode: 'BARCGB22', source: 'MANUAL' },
+  { name: 'HSBC UK', code: 'HSBC', countryCode: 'GB', logo: 'https://logos-world.net/wp-content/uploads/2021/02/HSBC-Logo.png', website: 'https://www.hsbc.co.uk', swiftCode: 'HBUKGB4B', source: 'MANUAL' },
+  
+  // Sénégal
+  { name: 'Banque de l\'Habitat du Sénégal', code: 'BHS', countryCode: 'SN', swiftCode: 'BHSNSNDX', source: 'MANUAL' },
+  { name: 'Société Générale Sénégal', code: 'SGSN', countryCode: 'SN', swiftCode: 'SOGESNDX', source: 'MANUAL' },
+  { name: 'Ecobank Sénégal', code: 'ECOSN', countryCode: 'SN', swiftCode: 'ECOSNSNDX', source: 'MANUAL' },
+  
+  // Côte d'Ivoire
+  { name: 'Société Générale Côte d\'Ivoire', code: 'SGCI', countryCode: 'CI', swiftCode: 'SOGECIDX', source: 'MANUAL' },
+  { name: 'Ecobank Côte d\'Ivoire', code: 'ECOCI', countryCode: 'CI', swiftCode: 'ECOCIDX', source: 'MANUAL' },
+  
+  // Cameroun
+  { name: 'Afriland First Bank', code: 'AFRILAND', countryCode: 'CM', swiftCode: 'CCBKCMCX', source: 'MANUAL' },
+  { name: 'Commercial Bank of Cameroon', code: 'CBC', countryCode: 'CM', swiftCode: 'CBCMCMCX', source: 'MANUAL' }
+]
 
 export const dynamic = 'force-dynamic'
 
 export async function POST() {
   try {
-    const hashedPassword = await hashPassword('admin123')
+    console.log('🚀 Initialisation de la base de données...')
     
+    // 1. Créer l'utilisateur admin uniquement
+    const hashedPassword = await hashPassword('admin123')
     await prisma.user.upsert({
       where: { email: 'admin@gicpromoteltd.com' },
       update: {},
@@ -18,59 +48,22 @@ export async function POST() {
         role: 'ADMIN',
       },
     })
+    console.log('✅ Utilisateur admin créé')
 
-    const existingPaymentMethods = await prisma.paymentMethod.count()
-    if (existingPaymentMethods === 0) {
-      await prisma.paymentMethod.createMany({
-        data: [
-          { name: 'Flutterwave', type: 'FLUTTERWAVE', minAmount: 10, maxAmount: 10000, active: true },
-          { name: 'Mobile Money', type: 'MOBILE_MONEY', minAmount: 5, maxAmount: 5000, active: true },
-          { name: 'Virement bancaire', type: 'BANK_TRANSFER', minAmount: 50, maxAmount: 50000, active: true }
-        ]
-      })
-    }
-
-    const existingRegions = await prisma.region.count()
-    if (existingRegions === 0) {
-      await prisma.region.createMany({
-        data: [
-          { name: 'Europe', code: 'europe', active: true },
-          { name: 'Africa', code: 'africa', active: true },
-          { name: 'Asia', code: 'asia', active: true },
-          { name: 'Americas', code: 'americas', active: true },
-          { name: 'Oceania', code: 'oceania', active: true }
-        ]
-      })
-    }
-
-    const existingConfigs = await prisma.configuration.count()
-    if (existingConfigs === 0) {
-      await prisma.configuration.createMany({
-        data: [
-          { key: 'APP_NAME', value: 'GIC CashTransfer', category: 'app', type: 'STRING', label: 'Nom de l\'application', required: true },
-          { key: 'APP_URL', value: 'http://localhost:3000', category: 'app', type: 'STRING', label: 'URL de l\'application', required: true },
-          { key: 'COMPANY_NAME', value: 'GIC Promote LTD', category: 'app', type: 'STRING', label: 'Nom de l\'entreprise', required: true },
-          { key: 'SUPPORT_EMAIL', value: 'support@gicpromoteltd.com', category: 'app', type: 'STRING', label: 'Email de support', required: true },
-          { key: 'EMAIL_HOST', value: 'smtp.gmail.com', category: 'email', type: 'STRING', label: 'Serveur SMTP', required: true },
-          { key: 'EMAIL_PORT', value: '587', category: 'email', type: 'NUMBER', label: 'Port SMTP', required: true },
-          { key: 'EMAIL_USER', value: '', category: 'email', type: 'STRING', label: 'Utilisateur SMTP', required: true },
-          { key: 'EMAIL_PASS', value: '', category: 'email', type: 'PASSWORD', label: 'Mot de passe SMTP', required: true, encrypted: true },
-          { key: 'EMAIL_FROM', value: 'noreply@gicpromoteltd.com', category: 'email', type: 'STRING', label: 'Email expéditeur', required: true },
-          { key: 'DEFAULT_TRANSACTION_FEE', value: '2.5', category: 'business', type: 'NUMBER', label: 'Frais de transaction par défaut', required: true },
-          { key: 'MIN_TRANSACTION_AMOUNT', value: '1', category: 'business', type: 'NUMBER', label: 'Montant minimum de transaction', required: true },
-          { key: 'MAX_TRANSACTION_AMOUNT', value: '50000', category: 'business', type: 'NUMBER', label: 'Montant maximum de transaction', required: true }
-        ]
-      })
-    }
-
+    console.log('🎉 Initialisation terminée!')
+    console.log('ℹ️ Utilisez le bouton "Synchroniser" pour charger les données complètes')
+    
     return NextResponse.json({ 
-      message: 'Base de données initialisée avec succès',
-      success: true 
+      message: 'Utilisateur admin créé. Utilisez le bouton "Synchroniser" pour charger toutes les données.',
+      success: true,
+      details: {
+        adminCreated: true
+      }
     })
   } catch (error) {
-    console.error('Erreur:', error)
+    console.error('❌ Erreur lors de l\'initialisation:', error)
     return NextResponse.json(
-      { error: 'Erreur lors de l\'initialisation' },
+      { error: 'Erreur lors de l\'initialisation: ' + error.message },
       { status: 500 }
     )
   }

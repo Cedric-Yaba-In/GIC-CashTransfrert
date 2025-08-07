@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { hashPassword } from '../src/lib/auth'
+import { bankSeeds } from './bank-seeds'
 
 const prisma = new PrismaClient()
 
@@ -18,55 +19,183 @@ async function main() {
     },
   })
 
-  // Create payment methods only if none exist
-  const existingPaymentMethods = await prisma.paymentMethod.count()
-  if (existingPaymentMethods === 0) {
-    await prisma.paymentMethod.createMany({
-      data: [
-        {
-          name: 'Flutterwave',
-          type: 'FLUTTERWAVE',
-          minAmount: 10,
-          maxAmount: 10000,
-          active: true,
-        },
-        {
-          name: 'Mobile Money',
-          type: 'MOBILE_MONEY',
-          minAmount: 5,
-          maxAmount: 5000,
-          active: true,
-        },
-        {
-          name: 'Virement bancaire',
-          type: 'BANK_TRANSFER',
-          minAmount: 50,
-          maxAmount: 50000,
-          active: true,
-        }
-      ]
+  // Create regions first
+  const regions = await Promise.all([
+    prisma.region.upsert({ where: { code: 'europe' }, update: {}, create: { name: 'Europe', code: 'europe', active: true } }),
+    prisma.region.upsert({ where: { code: 'africa' }, update: {}, create: { name: 'Afrique', code: 'africa', active: true } }),
+    prisma.region.upsert({ where: { code: 'americas' }, update: {}, create: { name: 'Amériques', code: 'americas', active: true } }),
+    prisma.region.upsert({ where: { code: 'asia' }, update: {}, create: { name: 'Asie', code: 'asia', active: true } })
+  ])
+
+  // Create countries with new structure
+  const countries = [
+    { name: 'France', code: 'FR', currency: 'Euro', currencyCode: 'EUR', flag: '🇫🇷', callingCode: '+33', regionCode: 'europe' },
+    { name: 'Sénégal', code: 'SN', currency: 'Franc CFA', currencyCode: 'XOF', flag: '🇸🇳', callingCode: '+221', regionCode: 'africa' },
+    { name: 'Côte d\'Ivoire', code: 'CI', currency: 'Franc CFA', currencyCode: 'XOF', flag: '🇨🇮', callingCode: '+225', regionCode: 'africa' },
+    { name: 'Cameroun', code: 'CM', currency: 'Franc CFA', currencyCode: 'XAF', flag: '🇨🇲', callingCode: '+237', regionCode: 'africa' },
+    { name: 'États-Unis', code: 'US', currency: 'Dollar américain', currencyCode: 'USD', flag: '🇺🇸', callingCode: '+1', regionCode: 'americas' }
+  ]
+
+  for (const countryData of countries) {
+    const region = regions.find(r => r.code === countryData.regionCode)
+    const country = await prisma.country.upsert({
+      where: { code: countryData.code },
+      update: {},
+      create: {
+        name: countryData.name,
+        code: countryData.code,
+        currency: countryData.currency,
+        currencyCode: countryData.currencyCode,
+        flag: countryData.flag,
+        callingCode: countryData.callingCode,
+        regionId: region?.id,
+        active: true
+      }
     })
-    console.log('✅ Méthodes de paiement créées')
-  } else {
-    console.log('ℹ️ Méthodes de paiement déjà existantes')
+
+    // Create payment methods with new categorization
+    // 1. Hybrid - Flutterwave
+    const flutterwaveMethod = await prisma.paymentMethod.upsert({
+      where: { name: `Flutterwave ${countryData.code}` },
+      update: {},
+      create: {
+        name: `Flutterwave ${countryData.code}`,
+        type: 'FLUTTERWAVE',
+        category: 'HYBRID',
+        subType: 'FLUTTERWAVE',
+        minAmount: 1,
+        maxAmount: 10000,
+        active: true
+      }
+    })
+
+    await prisma.countryPaymentMethod.upsert({
+      where: {
+        countryId_paymentMethodId: {
+          countryId: country.id,
+          paymentMethodId: flutterwaveMethod.id
+        }
+      },
+      update: {},
+      create: {
+        countryId: country.id,
+        paymentMethodId: flutterwaveMethod.id,
+        active: true,
+        fees: 5
+      }
+    })
+
+    // 2. Bank Transfer Global (to enable tab)
+    const bankTransferMethod = await prisma.paymentMethod.upsert({
+      where: { name: `Bank Transfer ${countryData.code}` },
+      update: {},
+      create: {
+        name: `Bank Transfer ${countryData.code}`,
+        type: 'BANK_TRANSFER',
+        category: 'BANK_TRANSFER',
+        subType: 'GLOBAL',
+        minAmount: 10,
+        maxAmount: null,
+        active: true
+      }
+    })
+
+    await prisma.countryPaymentMethod.upsert({
+      where: {
+        countryId_paymentMethodId: {
+          countryId: country.id,
+          paymentMethodId: bankTransferMethod.id
+        }
+      },
+      update: {},
+      create: {
+        countryId: country.id,
+        paymentMethodId: bankTransferMethod.id,
+        active: true,
+        fees: 0
+      }
+    })
+
+    // 3. Mobile Money for African countries
+    if (['SN', 'CI', 'CM'].includes(countryData.code)) {
+      // Orange Money
+      const orangeMethod = await prisma.paymentMethod.upsert({
+        where: { name: `Orange Money ${countryData.code}` },
+        update: {},
+        create: {
+          name: `Orange Money ${countryData.code}`,
+          type: 'MOBILE_MONEY',
+          category: 'MOBILE_MONEY',
+          subType: 'ORANGE',
+          minAmount: 1,
+          maxAmount: 5000,
+          active: false
+        }
+      })
+
+      await prisma.countryPaymentMethod.upsert({
+        where: {
+          countryId_paymentMethodId: {
+            countryId: country.id,
+            paymentMethodId: orangeMethod.id
+          }
+        },
+        update: {},
+        create: {
+          countryId: country.id,
+          paymentMethodId: orangeMethod.id,
+          active: false,
+          fees: 2
+        }
+      })
+
+      // MTN Mobile Money
+      const mtnMethod = await prisma.paymentMethod.upsert({
+        where: { name: `MTN Mobile Money ${countryData.code}` },
+        update: {},
+        create: {
+          name: `MTN Mobile Money ${countryData.code}`,
+          type: 'MOBILE_MONEY',
+          category: 'MOBILE_MONEY',
+          subType: 'MTN',
+          minAmount: 1,
+          maxAmount: 5000,
+          active: false
+        }
+      })
+
+      await prisma.countryPaymentMethod.upsert({
+        where: {
+          countryId_paymentMethodId: {
+            countryId: country.id,
+            paymentMethodId: mtnMethod.id
+          }
+        },
+        update: {},
+        create: {
+          countryId: country.id,
+          paymentMethodId: mtnMethod.id,
+          active: false,
+          fees: 2
+        }
+      })
+    }
+
+    // Create wallet for country
+    await prisma.wallet.upsert({
+      where: { countryId: country.id },
+      update: {},
+      create: {
+        countryId: country.id,
+        balance: 0,
+        active: true
+      }
+    })
   }
 
-  // Create regions only if none exist
-  const existingRegions = await prisma.region.count()
-  if (existingRegions === 0) {
-    await prisma.region.createMany({
-      data: [
-        { name: 'Europe', code: 'europe', active: true },
-        { name: 'Africa', code: 'africa', active: true },
-        { name: 'Asia', code: 'asia', active: true },
-        { name: 'Americas', code: 'americas', active: true },
-        { name: 'Oceania', code: 'oceania', active: true }
-      ]
-    })
-    console.log('✅ Régions créées')
-  } else {
-    console.log('ℹ️ Régions déjà existantes')
-  }
+  console.log('✅ Pays et méthodes de paiement créés avec nouvelle structure')
+
+
 
   // Create default configurations only if none exist
   const existingConfigs = await prisma.configuration.count()
@@ -95,6 +224,7 @@ async function main() {
         { key: 'FLUTTERWAVE_PUBLIC_KEY', value: '', category: 'payment', type: 'STRING', label: 'Flutterwave Public Key', required: false },
         { key: 'FLUTTERWAVE_SECRET_KEY', value: '', category: 'payment', type: 'PASSWORD', label: 'Flutterwave Secret Key', required: false, encrypted: true },
         { key: 'FLUTTERWAVE_WEBHOOK_HASH', value: '', category: 'payment', type: 'PASSWORD', label: 'Flutterwave Webhook Hash', required: false, encrypted: true },
+        { key: 'FLUTTERWAVE_ENCRYPTION_KEY', value: '', category: 'payment', type: 'PASSWORD', label: 'Flutterwave Encryption Key', required: false, encrypted: true },
         
         // RestCountries API
         { key: 'RESTCOUNTRIES_API_URL', value: 'https://restcountries.com/v3.1', category: 'api', type: 'STRING', label: 'RestCountries API URL', required: true },
@@ -113,6 +243,17 @@ async function main() {
     console.log('✅ Configurations créées')
   } else {
     console.log('ℹ️ Configurations déjà existantes')
+  }
+
+  // Create banks only if none exist
+  const existingBanks = await prisma.bank.count()
+  if (existingBanks === 0) {
+    await prisma.bank.createMany({
+      data: bankSeeds
+    })
+    console.log('✅ Banques créées')
+  } else {
+    console.log('ℹ️ Banques déjà existantes')
   }
 
   console.log('Database seeded successfully!')

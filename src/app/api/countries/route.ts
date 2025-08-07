@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { fetchCountryData, formatCountryForDB } from '@/lib/countries'
+import { FlutterwaveService } from '@/lib/flutterwave'
+
+async function getTotalBanksForCountries(countries: any[]) {
+  let total = 0
+  for (const country of countries) {
+    const count = await prisma.bank.count({ where: { countryCode: country.code } })
+    total += count
+  }
+  return total
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -35,12 +45,13 @@ export async function POST(request: Request) {
       const formattedCountry = formatCountryForDB(countryData)
       
       // Find or create region
+      const regionCode = formattedCountry.region.toLowerCase().replace(/\s+/g, '-')
       const region = await prisma.region.upsert({
-        where: { name: formattedCountry.region },
+        where: { code: regionCode },
         update: {},
         create: {
           name: formattedCountry.region,
-          code: formattedCountry.region.toLowerCase(),
+          code: regionCode,
           active: true
         }
       })
@@ -69,10 +80,34 @@ export async function POST(request: Request) {
 
 
       
+      // Ne pas associer automatiquement les catégories
+      // L'administrateur choisira manuellement les catégories à activer
+
+      // Créer le wallet pour le pays
+      await prisma.wallet.upsert({
+        where: { countryId: country.id },
+        update: {},
+        create: {
+          countryId: country.id,
+          balance: 0,
+          active: true
+        }
+      })
+      
       createdCountries.push(country)
+      
+      // Synchroniser automatiquement les banques pour ce pays
+      try {
+        const { BankService } = require('@/lib/bank-service')
+        const syncResult = await BankService.syncAllBanks(country.code)
+        console.log(`${syncResult.total} banques synchronisées pour ${country.name}`)
+      } catch (bankError) {
+        console.error(`Erreur synchronisation banques pour ${country.name}:`, bankError)
+      }
     }
 
-    return NextResponse.json(createdCountries)
+    const totalBanks = createdCountries.length > 0 ? await getTotalBanksForCountries(createdCountries) : 0
+    return NextResponse.json({ countries: createdCountries, banksAdded: totalBanks })
   } catch (error) {
     console.error('Countries creation error:', error)
     return NextResponse.json({ error: 'Failed to create countries' }, { status: 500 })

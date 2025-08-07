@@ -1,0 +1,9 @@
+@echo off
+echo Nettoyage et redémarrage propre...
+cd /d "f:\Personnel\Projet\GIC CashTransfrert"
+
+echo Suppression du cache Next.js...
+if exist .next rmdir /s /q .next
+
+echo Démarrage du serveur...
+npm run dev

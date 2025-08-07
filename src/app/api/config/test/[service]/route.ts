@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { ConfigService } from '@/lib/config'
 import nodemailer from 'nodemailer'
 
 export async function POST(
@@ -118,16 +119,9 @@ async function testSMSService() {
 
 async function testPaymentService() {
   try {
-    const paymentConfigs = await prisma.configuration.findMany({
-      where: { category: 'payment' }
-    })
+    const config = await ConfigService.getFlutterwaveConfig()
 
-    const config = paymentConfigs.reduce((acc, item) => {
-      acc[item.key] = item.value || ''
-      return acc
-    }, {} as Record<string, string>)
-
-    if (!config.FLUTTERWAVE_PUBLIC_KEY || !config.FLUTTERWAVE_SECRET_KEY) {
+    if (!config.publicKey || !config.secretKey) {
       return NextResponse.json(
         { message: 'Configuration Flutterwave incomplète' },
         { status: 400 }
@@ -136,7 +130,7 @@ async function testPaymentService() {
 
     const response = await fetch('https://api.flutterwave.com/v3/banks/NG', {
       headers: {
-        'Authorization': `Bearer ${config.FLUTTERWAVE_SECRET_KEY}`
+        'Authorization': `Bearer ${config.secretKey}`
       }
     })
 

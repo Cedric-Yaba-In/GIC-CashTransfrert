@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { FlutterwaveService } from '@/lib/flutterwave'
 
 export async function POST(
   request: Request,
@@ -47,14 +48,47 @@ export async function POST(
     })
 
     // Créer automatiquement le sous-wallet
+    let initialBalance = 0
+    let isReadOnly = false
+    let bankId = null
+    let accountNumber = null
+    let accountName = null
+    
+    // Si c'est Flutterwave, récupérer le solde depuis l'API
+    if (countryPaymentMethod.paymentMethod.type === 'FLUTTERWAVE') {
+      const country = await prisma.country.findUnique({ where: { id: countryId } })
+      if (country?.currencyCode) {
+        initialBalance = await FlutterwaveService.getBalance(country.currencyCode)
+        isReadOnly = true // Flutterwave est en lecture seule
+      }
+    }
+    
+    // Si c'est Bank Transfer, récupérer les infos bancaires
+    if (countryPaymentMethod.paymentMethod.type === 'BANK_TRANSFER') {
+      bankId = request.bankId || null
+      accountNumber = request.accountNumber || null
+      accountName = request.accountName || null
+    }
+
     await prisma.subWallet.upsert({
       where: { countryPaymentMethodId: countryPaymentMethod.id },
-      update: { active: true },
+      update: { 
+        active: true,
+        balance: initialBalance,
+        readOnly: isReadOnly,
+        bankId,
+        accountNumber,
+        accountName
+      },
       create: {
         walletId: wallet.id,
         countryPaymentMethodId: countryPaymentMethod.id,
-        balance: 0,
-        active: true
+        balance: initialBalance,
+        active: true,
+        readOnly: isReadOnly,
+        bankId,
+        accountNumber,
+        accountName
       }
     })
 

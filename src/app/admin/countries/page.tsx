@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ToastProvider'
-import { Plus, Globe, Settings, Search, Eye, ToggleLeft, ToggleRight, CreditCard, MapPin, DollarSign, Users, ChevronDown, Check, X } from 'lucide-react'
+import { Plus, Globe, Settings, Search, Eye, ToggleLeft, ToggleRight, CreditCard, MapPin, DollarSign, X, Check } from 'lucide-react'
 import AdminLayout from '@/components/AdminLayout'
 import ContentLoader from '@/components/ContentLoader'
+import CountrySelect from '@/components/CountrySelect'
+import RegionSelect from '@/components/RegionSelect'
 
 interface Country {
   id: number
@@ -59,6 +61,7 @@ export default function AdminCountriesPage() {
   const [paymentMethods, setPaymentMethods] = useState<any[]>([])
   const [configuring, setConfiguring] = useState<number | null>(null)
   const [removing, setRemoving] = useState<number | null>(null)
+
   const [user] = useState({ name: 'Admin', email: 'admin@gicpromoteltd.com' })
   
   const logout = () => {
@@ -162,7 +165,8 @@ export default function AdminCountriesPage() {
       })
 
       if (response.ok) {
-        toast.success('Pays ajoutés', `${selectedCountries.size} pays ont été ajoutés avec succès`)
+        const result = await response.json()
+        toast.success('Pays ajoutés', `${selectedCountries.size} pays ajoutés avec ${result.banksAdded || 0} banques synchronisées`)
         fetchCountries()
         setSelectedCountries(new Set())
         setShowAddModal(false)
@@ -267,13 +271,40 @@ export default function AdminCountriesPage() {
     try {
       const response = await fetch('/api/payment-methods')
       const data = await response.json()
-      // Déduplication basée sur l'ID
-      const uniqueMethods = Array.isArray(data) 
-        ? data.filter((method, index, self) => 
-            index === self.findIndex(m => m.id === method.id)
-          )
-        : []
-      setPaymentMethods(uniqueMethods)
+      
+      if (!Array.isArray(data)) {
+        setPaymentMethods([])
+        return
+      }
+      
+      // Filtrer les méthodes configurées et actives
+      let configuredMethods = data.filter((method, index, self) => 
+        index === self.findIndex(m => m.id === method.id) &&
+        method.isConfigured === true &&
+        method.active === true
+      )
+      
+      // Pour BANK_TRANSFER : masquer l'instance de base si une instance spécifique au pays existe
+      if (selectedCountryConfig) {
+        const hasCountrySpecificBankTransfer = configuredMethods.some(m => 
+          m.type === 'BANK_TRANSFER' && 
+          m.countries && 
+          m.countries.some((country: any) => country.countryId === selectedCountryConfig.id)
+        )
+        
+        if (hasCountrySpecificBankTransfer) {
+          // Masquer l'instance de base (celle sans pays spécifique ou avec countries vide)
+          configuredMethods = configuredMethods.filter(m => {
+            if (m.type === 'BANK_TRANSFER') {
+              // Garder seulement les instances avec des pays spécifiques
+              return m.countries && m.countries.length > 0
+            }
+            return true
+          })
+        }
+      }
+      
+      setPaymentMethods(configuredMethods)
     } catch (error) {
       toast.error('Erreur de chargement', 'Impossible de charger les méthodes de paiement')
     }
@@ -282,6 +313,77 @@ export default function AdminCountriesPage() {
   const addPaymentMethodToCountry = async (paymentMethodId: number) => {
     if (!selectedCountryConfig) return
     
+    const method = paymentMethods.find(m => m.id === paymentMethodId)
+    
+    // Si c'est Bank Transfer, vérifier s'il n'est pas déjà activé
+    if (method?.type === 'BANK_TRANSFER') {
+      // Vérifier si BANK_TRANSFER est déjà configuré pour ce pays
+      const isAlreadyConfigured = (selectedCountryConfig.paymentMethods || []).some(
+        (pm: any) => pm.paymentMethod?.type === 'BANK_TRANSFER'
+      )
+      
+      if (isAlreadyConfigured) {
+        // Vérifier si c'est une réactivation d'une instance de base désactivée
+        const baseMethod = paymentMethods.find(m => 
+          m.type === 'BANK_TRANSFER' && 
+          m.name === 'Virement bancaire' && 
+          (!m.countries || m.countries.length === 0)
+        )
+        
+        if (baseMethod && !baseMethod.active) {
+          // Réactiver l'instance de base
+          try {
+            const response = await fetch(`/api/payment-methods/${baseMethod.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ active: true })
+            })
+            
+            if (response.ok) {
+              toast.success('Réactivé', 'L\'instance de base des virements bancaires a été réactivée')
+              await fetchPaymentMethods()
+              return
+            }
+          } catch (error) {
+            console.error('Erreur réactivation:', error)
+          }
+        }
+        
+        toast.error('Déjà activé', 'Les virements bancaires sont déjà activés pour ce pays')
+        return
+      }
+      
+      setConfiguring(paymentMethodId)
+      try {
+        const response = await fetch(`/api/countries/${selectedCountryConfig.id}/categories`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ categories: [paymentMethodId] })
+        })
+        
+        if (response.ok) {
+          toast.success('Catégorie ajoutée', 'La catégorie BANK_TRANSFER a été activée pour ce pays')
+          await fetchCountries()
+          const countryResponse = await fetch(`/api/countries`)
+          if (countryResponse.ok) {
+            const countriesData = await countryResponse.json()
+            const updatedCountry = countriesData.find((c: any) => c.id === selectedCountryConfig.id)
+            if (updatedCountry) {
+              setSelectedCountryConfig(updatedCountry)
+            }
+          }
+        } else {
+          toast.error('Erreur', 'Impossible d\'ajouter la catégorie BANK_TRANSFER')
+        }
+      } catch (error) {
+        toast.error('Erreur de connexion', 'Impossible de communiquer avec le serveur')
+      } finally {
+        setConfiguring(null)
+      }
+      return
+    }
+    
+    // Pour les autres méthodes, procéder normalement
     setConfiguring(paymentMethodId)
     try {
       const response = await fetch(`/api/countries/${selectedCountryConfig.id}/payment-methods`, {
@@ -293,7 +395,6 @@ export default function AdminCountriesPage() {
       if (response.ok) {
         toast.success('Méthode ajoutée', 'La méthode de paiement a été configurée pour ce pays')
         await fetchCountries()
-        // Récupérer les données fraîches du pays
         const countryResponse = await fetch(`/api/countries`)
         if (countryResponse.ok) {
           const countriesData = await countryResponse.json()
@@ -311,6 +412,8 @@ export default function AdminCountriesPage() {
       setConfiguring(null)
     }
   }
+
+
 
   const removePaymentMethodFromCountry = async (paymentMethodId: number) => {
     if (!selectedCountryConfig) return
@@ -461,7 +564,7 @@ export default function AdminCountriesPage() {
         {/* Modal d'ajout de pays */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full min-h-[70vh] max-h-[90vh] overflow-hidden">
               {/* Header */}
               <div className="bg-gradient-to-r from-[#0B3371] to-[#0B3371]/80 p-6 text-white">
                 <div className="flex items-center justify-between">
@@ -484,22 +587,18 @@ export default function AdminCountriesPage() {
                 </div>
               </div>
 
-              <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+              <div className="p-6 overflow-y-auto min-h-[50vh] max-h-[calc(90vh-200px)]">
                 {/* Sélection de région */}
                 <div className="mb-6">
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
                     1. Choisissez une région
                   </label>
-                  <select
+                  <RegionSelect
+                    regions={regions}
                     value={selectedRegion}
-                    onChange={(e) => handleRegionSelect(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0B3371] focus:border-transparent transition-all"
-                  >
-                    <option value="">Sélectionnez une région...</option>
-                    {regions.map(region => (
-                      <option key={region.code} value={region.name.toLowerCase()}>{region.name}</option>
-                    ))}
-                  </select>
+                    onChange={handleRegionSelect}
+                    placeholder="Sélectionnez une région..."
+                  />
                 </div>
 
                 {/* Liste des pays de la région */}
@@ -841,17 +940,39 @@ export default function AdminCountriesPage() {
                   
                   {paymentMethods.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {paymentMethods.map((method) => {
+                      {paymentMethods.filter(method => {
+                        // Pour BANK_TRANSFER, masquer l'instance de base si une instance spécifique au pays existe
+                        if (method.type === 'BANK_TRANSFER') {
+                          const hasCountrySpecific = paymentMethods.some(m => 
+                            m.type === 'BANK_TRANSFER' && 
+                            m.countries && 
+                            m.countries.some((country: any) => country.countryId === selectedCountryConfig?.id)
+                          )
+                          if (hasCountrySpecific) {
+                            // Garder seulement les instances avec des pays spécifiques
+                            return method.countries && method.countries.length > 0
+                          }
+                        }
+                        return true
+                      }).map((method) => {
                         const configuredMethod = (selectedCountryConfig.paymentMethods || []).find(
                           (pm: any) => pm.paymentMethodId === method.id
                         )
                         const isConfigured = !!configuredMethod
+                        const isGlobalMethod = method.type === 'FLUTTERWAVE' // Méthodes configurées globalement
+                        
+                        // Pour BANK_TRANSFER, vérifier s'il est déjà activé (même avec un autre ID)
+                        const isBankTransferConfigured = method.type === 'BANK_TRANSFER' && 
+                          (selectedCountryConfig.paymentMethods || []).some(
+                            (pm: any) => pm.paymentMethod?.type === 'BANK_TRANSFER'
+                          )
+                        const finalIsConfigured = isConfigured || isBankTransferConfigured
                         
                         return (
                           <div
                             key={method.id}
                             className={`p-4 border-2 rounded-xl transition-all ${
-                              isConfigured 
+                              finalIsConfigured 
                                 ? 'border-green-200 bg-green-50' 
                                 : 'border-gray-200 hover:border-[#0B3371]/30'
                             }`}
@@ -867,16 +988,30 @@ export default function AdminCountriesPage() {
                                 </div>
                               </div>
                               <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                isConfigured ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                                finalIsConfigured 
+                                  ? 'bg-green-100 text-green-700' 
+                                  : isGlobalMethod 
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : 'bg-gray-100 text-gray-600'
                               }`}>
-                                {isConfigured ? 'Configuré' : 'Non configuré'}
+                                {finalIsConfigured 
+                                  ? 'Configuré' 
+                                  : isGlobalMethod 
+                                    ? 'Configuration globale'
+                                    : 'Non configuré'
+                                }
                               </span>
                             </div>
                             
                             <div className="text-sm text-gray-600 mb-3">
                               <p>Montant global: {method.minAmount} - {method.maxAmount || '∞'} {selectedCountryConfig.currencyCode}</p>
                               <p>Statut global: {method.active ? 'Actif' : 'Inactif'}</p>
-                              {isConfigured && configuredMethod && (
+                              {isGlobalMethod && !finalIsConfigured && (
+                                <p className="text-blue-600 font-medium mt-1">
+                                  🌐 Configuration centralisée - Prêt à utiliser
+                                </p>
+                              )}
+                              {finalIsConfigured && configuredMethod && (
                                 <p className="text-[#0B3371] font-medium mt-1">
                                   Config pays: {configuredMethod.minAmount || 'N/A'} - {configuredMethod.maxAmount || '∞'} | Frais: {configuredMethod.fees}%
                                 </p>
@@ -884,7 +1019,7 @@ export default function AdminCountriesPage() {
                             </div>
                             
                             <div className="flex space-x-2">
-                              {!isConfigured ? (
+                              {!finalIsConfigured ? (
                                 <button
                                   onClick={() => addPaymentMethodToCountry(method.id)}
                                   disabled={configuring === method.id}
@@ -893,7 +1028,16 @@ export default function AdminCountriesPage() {
                                   {configuring === method.id ? (
                                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                   ) : null}
-                                  <span>{configuring === method.id ? 'Configuration...' : 'Configurer'}</span>
+                                  <span>
+                                    {configuring === method.id 
+                                      ? 'Activation...' 
+                                      : method.type === 'BANK_TRANSFER'
+                                        ? 'Activer les virements'
+                                        : isGlobalMethod 
+                                          ? 'Activer pour ce pays'
+                                          : 'Configurer'
+                                    }
+                                  </span>
                                 </button>
                               ) : (
                                 <>
@@ -929,8 +1073,17 @@ export default function AdminCountriesPage() {
                       <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
                         <CreditCard className="w-6 h-6 text-gray-400" />
                       </div>
-                      <p className="text-gray-500">Aucune méthode de paiement disponible</p>
-                      <p className="text-sm text-gray-400 mt-1">Créez d'abord des méthodes de paiement dans la section dédiée</p>
+                      <p className="text-gray-500">Aucune méthode de paiement configurée</p>
+                      <p className="text-sm text-gray-400 mt-1">
+                        Configurez d'abord vos méthodes de paiement dans 
+                        <button 
+                          onClick={() => window.open('/admin/payment-methods', '_blank')}
+                          className="text-[#F37521] hover:underline mx-1"
+                        >
+                          Méthodes de Paiement
+                        </button>
+                        avant de les associer aux pays
+                      </p>
                     </div>
                   )}
                 </div>
@@ -1170,6 +1323,7 @@ export default function AdminCountriesPage() {
             </div>
           )}
         </div>
+
       </ContentLoader>
     </AdminLayout>
   )

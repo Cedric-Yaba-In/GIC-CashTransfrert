@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useToast } from '@/components/ToastProvider'
-import { ArrowLeft, Plus, Minus, Wallet, CreditCard } from 'lucide-react'
+import { ArrowLeft, Plus, Minus, Wallet, CreditCard, RefreshCw } from 'lucide-react'
 import AdminLayout from '@/components/AdminLayout'
 import ContentLoader from '@/components/ContentLoader'
 import { formatAmount } from '@/lib/formatters'
@@ -18,6 +18,7 @@ export default function WalletDetailPage() {
   const [operation, setOperation] = useState<'credit' | 'debit'>('credit')
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [syncLoading, setSyncLoading] = useState(false)
   const [user] = useState({ name: 'Admin', email: 'admin@gicpromoteltd.com' })
   
   const logout = () => {
@@ -85,6 +86,8 @@ export default function WalletDetailPage() {
     }
   }
 
+
+
   return (
     <AdminLayout user={user} onLogout={logout}>
       <ContentLoader loading={loading}>
@@ -99,7 +102,7 @@ export default function WalletDetailPage() {
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-2xl font-bold text-[#0B3371]">Portefeuille {wallet.country.name}</h1>
+                <h1 className="text-2xl font-bold text-[#0B3371]">Portefeuille {wallet.country?.name || 'Inconnu'}</h1>
                 <p className="text-gray-600">Gestion des sous-portefeuilles par méthode de paiement</p>
               </div>
             </div>
@@ -112,15 +115,15 @@ export default function WalletDetailPage() {
                     <Wallet className="w-8 h-8 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-3xl font-bold">{wallet.country.name}</h2>
-                    <p className="text-white/80">{wallet.country.currency} ({wallet.country.currencyCode})</p>
-                    <p className="text-white/60 text-sm">Code pays: {wallet.country.code}</p>
+                    <h2 className="text-3xl font-bold">{wallet.country?.name || 'Inconnu'}</h2>
+                    <p className="text-white/80">{wallet.country?.currency || 'N/A'} ({wallet.country?.currencyCode || 'N/A'})</p>
+                    <p className="text-white/60 text-sm">Code pays: {wallet.country?.code || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="text-white/80 text-sm uppercase tracking-wide">Solde Total</p>
                   <p className="text-4xl font-bold">{formatAmount(wallet.balance)}</p>
-                  <p className="text-white/80">{wallet.country.currencyCode}</p>
+                  <p className="text-white/80">{wallet.country?.currencyCode || 'N/A'}</p>
                 </div>
               </div>
             </div>
@@ -139,15 +142,15 @@ export default function WalletDetailPage() {
                     </div>
                   </div>
                   <span className="bg-[#F37521]/10 text-[#F37521] px-3 py-1 rounded-full text-sm font-medium">
-                    {wallet.subWallets.length} configurées
+                    {wallet.subWallets?.length || 0} configurées
                   </span>
                 </div>
               </div>
 
               <div className="p-6 bg-slate-50">
-                {wallet.subWallets.length > 0 ? (
+                {(wallet.subWallets?.length || 0) > 0 ? (
                   <div className="space-y-4">
-                    {wallet.subWallets.map((subWallet: any) => (
+                    {(wallet.subWallets || []).map((subWallet: any) => (
                       <div key={subWallet.id} className="bg-white border border-slate-200 rounded-xl p-6 hover:shadow-md transition-all duration-200">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-4">
@@ -179,30 +182,66 @@ export default function WalletDetailPage() {
                           <div className="flex items-center space-x-6">
                             <div className="text-right">
                               <p className="text-2xl font-bold text-[#0B3371]">{formatAmount(subWallet.balance)}</p>
-                              <p className="text-slate-500">{wallet.country.currencyCode}</p>
+                              <p className="text-slate-500">{wallet.country?.currencyCode || 'N/A'}</p>
                             </div>
                             
                             <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => {
-                                  setSelectedSubWallet(subWallet)
-                                  setOperation('credit')
-                                }}
-                                className="p-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors group"
-                                title="Créditer"
-                              >
-                                <Plus className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedSubWallet(subWallet)
-                                  setOperation('debit')
-                                }}
-                                className="p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors group"
-                                title="Débiter"
-                              >
-                                <Minus className="w-4 h-4" />
-                              </button>
+                              {subWallet.countryPaymentMethod?.paymentMethod?.type === 'FLUTTERWAVE' ? (
+                                <button
+                                  onClick={async () => {
+                                    setSyncLoading(true)
+                                    try {
+                                      const token = localStorage.getItem('adminToken')
+                                      const response = await fetch(`/api/admin/wallets/sync-flutterwave/${wallet.country?.id || wallet.countryId}`, {
+                                        method: 'POST',
+                                        headers: { 'Authorization': `Bearer ${token}` }
+                                      })
+                                      
+                                      if (response.ok) {
+                                        const result = await response.json()
+                                        toast.success('Synchronisation réussie', `Solde Flutterwave synchronisé pour ${result.country}`)
+                                        fetchWallet()
+                                      } else {
+                                        const error = await response.json()
+                                        toast.error('Erreur de synchronisation', error.error)
+                                      }
+                                    } catch (error) {
+                                      toast.error('Erreur de connexion', 'Impossible de synchroniser le solde')
+                                    } finally {
+                                      setSyncLoading(false)
+                                    }
+                                  }}
+                                  disabled={syncLoading}
+                                  className="flex items-center space-x-2 px-3 py-2 bg-[#F37521] hover:bg-[#F37521]/90 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                                  title={`Synchroniser Flutterwave - ${wallet.country?.name || 'Pays'}`}
+                                >
+                                  <RefreshCw className={`w-4 h-4 ${syncLoading ? 'animate-spin' : ''}`} />
+                                  <span>Sync</span>
+                                </button>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedSubWallet(subWallet)
+                                      setOperation('credit')
+                                    }}
+                                    className="p-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors group"
+                                    title="Créditer"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedSubWallet(subWallet)
+                                      setOperation('debit')
+                                    }}
+                                    className="p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors group"
+                                    title="Débiter"
+                                  >
+                                    <Minus className="w-4 h-4" />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -242,7 +281,7 @@ export default function WalletDetailPage() {
                   {selectedSubWallet.countryPaymentMethod?.paymentMethod?.type || 'N/A'}
                 </p>
                 <p className="text-sm text-slate-600">
-                  Solde actuel: <span className="font-semibold">{formatAmount(selectedSubWallet.balance, wallet.country.currencyCode)}</span>
+                  Solde actuel: <span className="font-semibold">{formatAmount(selectedSubWallet.balance)} {wallet.country?.currencyCode || ''}</span>
                 </p>
               </div>
 

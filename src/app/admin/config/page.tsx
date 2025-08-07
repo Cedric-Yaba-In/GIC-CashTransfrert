@@ -94,6 +94,7 @@ export default function ConfigPage() {
   const [changes, setChanges] = useState<Map<string, string>>(new Map())
   const [testingServices, setTestingServices] = useState<Set<string>>(new Set())
   const [testResults, setTestResults] = useState<Map<string, { success: boolean, message: string }>>(new Map())
+  const [syncing, setSyncing] = useState(false)
   const [user] = useState({ name: 'Admin', email: 'admin@gicpromoteltd.com' })
   
   const logout = () => {
@@ -232,28 +233,34 @@ export default function ConfigPage() {
         {/* Actions */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            {configs.length === 0 && (
-              <button
-                onClick={async () => {
-                  try {
-                    const response = await fetch('/api/admin/seed-config', { method: 'POST' })
-                    const result = await response.json()
-                    if (response.ok) {
-                      toast.success('Configurations créées', result.message)
-                      fetchConfigs()
-                    } else {
-                      toast.error('Erreur', result.error)
-                    }
-                  } catch (error) {
-                    toast.error('Erreur', 'Impossible de créer les configurations')
+            <button
+              onClick={async () => {
+                setSyncing(true)
+                try {
+                  const response = await fetch('/api/admin/sync-all', { method: 'POST' })
+                  const result = await response.json()
+                  if (response.ok) {
+                    toast.success('Synchronisation complète', result.message)
+                    fetchConfigs()
+                  } else {
+                    toast.error('Erreur', result.error)
                   }
-                }}
-                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-[#0B3371] to-[#0B3371]/80 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
-              >
+                } catch (error) {
+                  toast.error('Erreur', 'Impossible de synchroniser les données')
+                } finally {
+                  setSyncing(false)
+                }
+              }}
+              disabled={syncing}
+              className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-[#0B3371] to-[#0B3371]/80 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50"
+            >
+              {syncing ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
                 <Settings className="w-5 h-5" />
-                <span>Initialiser les configurations</span>
-              </button>
-            )}
+              )}
+              <span>{syncing ? 'Synchronisation...' : 'Synchroniser'}</span>
+            </button>
             <div className="flex items-center space-x-4">
               {changes.size > 0 && (
                 <div className="flex items-center space-x-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
@@ -440,7 +447,35 @@ export default function ConfigPage() {
                   <Settings className="w-12 h-12 text-gray-400" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">Aucune configuration disponible</h3>
-                <p className="text-gray-500 max-w-md mx-auto">Les paramètres de configuration apparaîtront ici une fois le système initialisé.</p>
+                <p className="text-gray-500 max-w-md mx-auto mb-6">Les paramètres de configuration apparaîtront ici une fois le système initialisé.</p>
+                <button
+                  onClick={async () => {
+                    setSyncing(true)
+                    try {
+                      const response = await fetch('/api/admin/sync-all', { method: 'POST' })
+                      const result = await response.json()
+                      if (response.ok) {
+                        toast.success('Synchronisation complète', result.message)
+                        fetchConfigs()
+                      } else {
+                        toast.error('Erreur', result.error)
+                      }
+                    } catch (error) {
+                      toast.error('Erreur', 'Impossible de synchroniser les données')
+                    } finally {
+                      setSyncing(false)
+                    }
+                  }}
+                  disabled={syncing}
+                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-[#0B3371] to-[#0B3371]/80 text-white rounded-xl font-semibold hover:shadow-lg transition-all mx-auto disabled:opacity-50"
+                >
+                  {syncing ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Settings className="w-5 h-5" />
+                  )}
+                  <span>{syncing ? 'Synchronisation...' : 'Synchroniser maintenant'}</span>
+                </button>
               </div>
             </div>
           )}

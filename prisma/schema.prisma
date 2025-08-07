@@ -49,6 +49,8 @@ model Country {
   region Region? @relation(fields: [regionId], references: [id])
   paymentMethods CountryPaymentMethod[]
   wallet Wallet?
+  banks Bank[]
+  bankAccounts BankAccount[]
   senderTransactions Transaction[] @relation("SenderTransactions")
   receiverTransactions Transaction[] @relation("ReceiverTransactions")
 
@@ -59,15 +61,20 @@ model PaymentMethod {
   id          Int               @id @default(autoincrement())
   name        String            @db.VarChar(191)
   type        PaymentMethodType
+  category    PaymentCategory   @default(HYBRID)
+  subType     String?           @db.VarChar(50)
+  bankId      Int?
   minAmount   Decimal           @default(0)
   maxAmount   Decimal?
   active      Boolean           @default(true)
+  isGlobal    Boolean           @default(false)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
   countries CountryPaymentMethod[]
   senderTransactions Transaction[] @relation("SenderPaymentTransactions")
   receiverTransactions Transaction[] @relation("ReceiverPaymentTransactions")
+  bank        Bank?             @relation(fields: [bankId], references: [id])
 
   @@map("payment_methods")
 }
@@ -138,17 +145,83 @@ model Wallet {
   @@map("wallets")
 }
 
+model Bank {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(191)
+  code          String   @db.VarChar(20)
+  countryCode   String   @db.VarChar(10)
+  logo          String?  @db.VarChar(500)
+  website       String?  @db.VarChar(191)
+  swiftCode     String?  @db.VarChar(20)
+  routingNumber String?  @db.VarChar(50)
+  source        String   @default("MANUAL") @db.VarChar(20) // FLUTTERWAVE, MANUAL, API
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  country       Country  @relation(fields: [countryCode], references: [code])
+  subWallets    SubWallet[]
+  configuration BankConfiguration?
+  paymentMethods PaymentMethod[]
+  bankAccounts  BankAccount[]
+
+  @@unique([code, countryCode])
+  @@map("banks")
+}
+
+model BankConfiguration {
+  id                 Int      @id @default(autoincrement())
+  bankId             Int      @unique
+  accountNumber      String   @db.VarChar(50)
+  accountName        String   @db.VarChar(191)
+  iban               String?  @db.VarChar(50)
+  beneficiaryAddress String?  @db.Text
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  bank Bank @relation(fields: [bankId], references: [id], onDelete: Cascade)
+
+  @@map("bank_configurations")
+}
+
+model BankAccount {
+  id            Int      @id @default(autoincrement())
+  bankId        Int
+  countryId     Int
+  accountName   String   @db.VarChar(191)
+  accountNumber String   @db.VarChar(191)
+  iban          String?  @db.VarChar(50)
+  swiftCode     String?  @db.VarChar(20)
+  routingNumber String?  @db.VarChar(50)
+  branchCode    String?  @db.VarChar(20)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  bank    Bank    @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  country Country @relation(fields: [countryId], references: [id], onDelete: Cascade)
+
+  @@unique([bankId, countryId])
+  @@map("bank_accounts")
+}
+
 model SubWallet {
   id                      Int     @id @default(autoincrement())
   walletId                Int
   countryPaymentMethodId  Int     @unique
   balance                 Decimal @default(0)
   active                  Boolean @default(true)
+  readOnly                Boolean @default(false)
+  bankId                  Int?
+  accountNumber           String? @db.VarChar(50)
+  accountName             String? @db.VarChar(191)
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 
   wallet                Wallet                @relation(fields: [walletId], references: [id], onDelete: Cascade)
   countryPaymentMethod  CountryPaymentMethod  @relation(fields: [countryPaymentMethodId], references: [id], onDelete: Cascade)
+  bank                  Bank?                 @relation(fields: [bankId], references: [id])
 
   @@map("sub_wallets")
 }
@@ -177,8 +250,14 @@ enum PaymentMethodType {
   API
   MANUAL
   FLUTTERWAVE
-  MOBILE_MONEY
   BANK_TRANSFER
+  MOBILE_MONEY
+}
+
+enum PaymentCategory {
+  HYBRID
+  BANK_TRANSFER
+  MOBILE_MONEY
 }
 
 enum TransactionStatus {

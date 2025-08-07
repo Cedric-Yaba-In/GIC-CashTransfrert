@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ToastProvider'
-import { Plus, Minus, Wallet } from 'lucide-react'
+import { Plus, Minus, Wallet, RefreshCw } from 'lucide-react'
 import AdminLayout from '@/components/AdminLayout'
 import ContentLoader from '@/components/ContentLoader'
 import { formatAmount } from '@/lib/formatters'
@@ -17,6 +17,7 @@ export default function AdminWalletsPage() {
   const [operation, setOperation] = useState<'credit' | 'debit'>('credit')
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [syncLoading, setSyncLoading] = useState(false)
   const [user] = useState({ name: 'Admin', email: 'admin@gicpromoteltd.com' })
   
   const logout = () => {
@@ -87,9 +88,12 @@ export default function AdminWalletsPage() {
 
 
 
+
+
   return (
     <AdminLayout user={user} onLogout={logout}>
       <ContentLoader loading={loading}>
+    
         {/* Wallets Grid */}
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
           {(wallets || []).length > 0 ? (
@@ -152,26 +156,66 @@ export default function AdminWalletsPage() {
                         </div>
                         
                         <div className="flex space-x-2">
-                          <button
-                            onClick={() => {
-                              setSelectedWallet(subWallet)
-                              setOperation('credit')
-                            }}
-                            className="flex-1 flex items-center justify-center space-x-2 py-2 px-3 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors text-sm font-medium"
-                          >
-                            <Plus className="w-4 h-4" />
-                            <span>Créditer</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedWallet(subWallet)
-                              setOperation('debit')
-                            }}
-                            className="flex-1 flex items-center justify-center space-x-2 py-2 px-3 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors text-sm font-medium"
-                          >
-                            <Minus className="w-4 h-4" />
-                            <span>Débiter</span>
-                          </button>
+                          {subWallet.countryPaymentMethod?.paymentMethod?.type === 'FLUTTERWAVE' ? (
+                            <>
+                              <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
+                                <p className="text-xs text-blue-600 font-medium">🔒 Flutterwave - {wallet.country.name}</p>
+                              </div>
+                              <button
+                                onClick={async () => {
+                                  setSyncLoading(true)
+                                  try {
+                                    const token = localStorage.getItem('adminToken')
+                                    const response = await fetch(`/api/admin/wallets/sync-flutterwave/${wallet.countryId}`, {
+                                      method: 'POST',
+                                      headers: { 'Authorization': `Bearer ${token}` }
+                                    })
+                                    
+                                    if (response.ok) {
+                                      const result = await response.json()
+                                      toast.success('Synchronisation réussie', `Solde Flutterwave synchronisé pour ${result.country}`)
+                                      fetchWallets()
+                                    } else {
+                                      const error = await response.json()
+                                      toast.error('Erreur de synchronisation', error.error)
+                                    }
+                                  } catch (error) {
+                                    toast.error('Erreur de connexion', 'Impossible de synchroniser le solde')
+                                  } finally {
+                                    setSyncLoading(false)
+                                  }
+                                }}
+                                disabled={syncLoading}
+                                className="flex items-center space-x-2 px-3 py-2 bg-[#F37521] hover:bg-[#F37521]/90 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                              >
+                                <RefreshCw className={`w-4 h-4 ${syncLoading ? 'animate-spin' : ''}`} />
+                                <span>Sync</span>
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setSelectedWallet(subWallet)
+                                  setOperation('credit')
+                                }}
+                                className="flex-1 flex items-center justify-center space-x-2 py-2 px-3 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors text-sm font-medium"
+                              >
+                                <Plus className="w-4 h-4" />
+                                <span>Créditer</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedWallet(subWallet)
+                                  setOperation('debit')
+                                }}
+                                className="flex-1 flex items-center justify-center space-x-2 py-2 px-3 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors text-sm font-medium"
+                              >
+                                <Minus className="w-4 h-4" />
+                                <span>Débiter</span>
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     ))}
