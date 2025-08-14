@@ -99,6 +99,23 @@ export default function TransferPage() {
 
   useEffect(() => {
     fetchRegions()
+    
+    // Restaurer les données si l'utilisateur revient de la page de paiement
+    const storedData = sessionStorage.getItem('transferData')
+    if (storedData) {
+      const data = JSON.parse(storedData)
+      setValue('senderName', data.senderName)
+      setValue('senderEmail', data.senderEmail)
+      setValue('senderPhone', data.senderPhone)
+      setValue('senderRegion', data.senderRegion)
+      setValue('senderCountryId', data.senderCountryId)
+      setValue('receiverName', data.receiverName)
+      setValue('receiverEmail', data.receiverEmail || '')
+      setValue('receiverPhone', data.receiverPhone)
+      setValue('receiverRegion', data.receiverRegion)
+      setValue('receiverCountryId', data.receiverCountryId)
+      setValue('amount', data.amount)
+    }
   }, [])
 
   useEffect(() => {

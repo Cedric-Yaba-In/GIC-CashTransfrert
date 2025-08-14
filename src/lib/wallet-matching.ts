@@ -27,28 +27,25 @@ export async function getAvailablePaymentMethods(
       return []
     }
 
-    // Get sender country payment methods
-    const senderCountryMethods = await prisma.countryPaymentMethod.findMany({
-      where: {
-        countryId: senderCountryId,
-        active: true,
-        minAmount: { lte: amount },
-        OR: [
-          { maxAmount: null },
-          { maxAmount: { gte: amount } }
-        ]
-      },
-      include: {
-        paymentMethod: true,
-        country: true
-      }
-    })
+    // Get exchange rate and calculate converted amount
+    const [senderCountry, receiverCountry] = await Promise.all([
+      prisma.country.findUnique({ where: { id: senderCountryId } }),
+      prisma.country.findUnique({ where: { id: receiverCountryId } })
+    ])
 
-    // Get receiver country wallets and sub-wallets
+    if (!senderCountry || !receiverCountry) {
+      return []
+    }
+
+    // Calculate fees and converted amount
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/transfer/calculate-fees?senderCountryId=${senderCountryId}&receiverCountryId=${receiverCountryId}&amount=${amount}`)
+    const feeCalculation = response.ok ? await response.json() : null
+    const convertedAmount = feeCalculation?.summary?.amountReceived || amount
+
+    // Check if receiver country has at least one method with sufficient balance
     const receiverWallet = await prisma.wallet.findUnique({
       where: { countryId: receiverCountryId },
       include: {
-        country: true,
         subWallets: {
           include: {
             countryPaymentMethod: {
@@ -65,24 +62,40 @@ export async function getAvailablePaymentMethods(
       return []
     }
 
+    // Check if any receiver method has sufficient balance
+    const hasAnyReceiverBalance = receiverWallet.subWallets.some(
+      sw => sw.balance.toNumber() >= convertedAmount
+    )
+
+    if (!hasAnyReceiverBalance) {
+      return []
+    }
+
+    // Get all sender country payment methods (since receiver has balance)
+    const senderCountryMethods = await prisma.countryPaymentMethod.findMany({
+      where: {
+        countryId: senderCountryId,
+        active: true,
+        paymentMethod: { active: true }
+      },
+      include: {
+        paymentMethod: true,
+        country: true
+      }
+    })
+
     const availableMethods: PaymentMethodAvailability[] = []
 
     for (const senderMethod of senderCountryMethods) {
-      if (!senderMethod.paymentMethod || !senderMethod.paymentMethod.active) continue
+      if (!senderMethod.paymentMethod) continue
 
-      // Check if receiver country has sufficient balance for this payment method
-      const receiverSubWallet = receiverWallet.subWallets.find(
-        sw => sw.countryPaymentMethod.paymentMethodId === senderMethod.paymentMethodId
-      )
-
-      const hasBalance = receiverSubWallet ? receiverSubWallet.balance.toNumber() >= amount : false
-
+      // All sender methods are available since receiver has balance
       availableMethods.push({
         paymentMethodId: senderMethod.paymentMethodId,
         paymentMethodName: senderMethod.paymentMethod.name,
         paymentMethodType: senderMethod.paymentMethod.type,
-        available: hasBalance,
-        balance: receiverSubWallet?.balance.toNumber() || 0,
+        available: true,
+        balance: 999999, // Unlimited for sender methods
         minAmount: senderMethod.minAmount?.toNumber() || 0,
         maxAmount: senderMethod.maxAmount?.toNumber() || null,
         countryId: senderMethod.countryId,
@@ -91,12 +104,7 @@ export async function getAvailablePaymentMethods(
       })
     }
 
-    return availableMethods.sort((a, b) => {
-      // Sort by availability first, then by balance
-      if (a.available && !b.available) return -1
-      if (!a.available && b.available) return 1
-      return b.balance - a.balance
-    })
+    return availableMethods
 
   } catch (error) {
     console.error('Error getting available payment methods:', sanitizeForLog(error))
