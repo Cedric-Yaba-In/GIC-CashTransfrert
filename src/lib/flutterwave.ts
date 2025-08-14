@@ -1,4 +1,5 @@
 import { ConfigService } from './config'
+import { sanitizeInput } from './security'
 
 export class FlutterwaveService {
   static async getBalance(currency: string): Promise<number> {
@@ -23,7 +24,8 @@ export class FlutterwaveService {
       const data = await response.json()
       
       // Rechercher le solde pour la devise spécifiée
-      const balance = data.data.find((bal: any) => bal.currency === currency)
+      const sanitizedCurrency = sanitizeInput(currency)
+      const balance = data.data.find((bal: any) => bal.currency === sanitizedCurrency)
       
       return balance ? parseFloat(balance.available_balance) : 0
     } catch (error) {

@@ -38,10 +38,13 @@ export default function CountrySelect({
 
   const selectedCountry = countries.find(c => c.id === value)
   
-  const filteredCountries = countries.filter(country =>
-    country.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    country.code.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredCountries = countries.filter(country => {
+    if (!country || typeof country.name !== 'string' || typeof country.code !== 'string') {
+      return false
+    }
+    return country.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           country.code.toLowerCase().includes(searchTerm.toLowerCase())
+  })
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -79,7 +82,7 @@ export default function CountrySelect({
                 alt={`${selectedCountry.name} flag`}
                 className="w-6 h-4 object-cover rounded border"
                 onError={(e) => {
-                  e.currentTarget.src = '/placeholder-flag.png'
+                  e.currentTarget.src = '/placeholder-flag.svg'
                 }}
               />
               <span className="font-medium text-gray-900">
@@ -125,7 +128,7 @@ export default function CountrySelect({
                     alt={`${country.name} flag`}
                     className="w-6 h-4 object-cover rounded border"
                     onError={(e) => {
-                      e.currentTarget.src = '/placeholder-flag.png'
+                      e.currentTarget.src = '/placeholder-flag.svg'
                     }}
                   />
                   <div className="flex-1">

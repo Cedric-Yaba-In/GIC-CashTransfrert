@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { validateQueryParam, sanitizeForLog } from '@/lib/security'
 
 const prisma = new PrismaClient()
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const countryCode = searchParams.get('countryCode')
+    const countryCode = validateQueryParam(searchParams.get('countryCode'))
 
     if (!countryCode) {
       return NextResponse.json(
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erreur lors de la récupération des wallets:', error)
+    console.error('Erreur lors de la récupération des wallets:', sanitizeForLog(error))
     return NextResponse.json(
       { error: 'Erreur interne du serveur' },
       { status: 500 }

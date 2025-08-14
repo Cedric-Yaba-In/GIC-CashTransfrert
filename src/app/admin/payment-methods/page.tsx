@@ -155,9 +155,16 @@ export default function AdminPaymentMethodsPage() {
   const syncBanksForCountry = async (countryCode: string) => {
     setSyncingBanks(true)
     try {
+      // Get CSRF token
+      const csrfResponse = await fetch('/api/csrf-token')
+      const { csrfToken } = await csrfResponse.json()
+      
       const response = await fetch('/api/banks/sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
         body: JSON.stringify({ countryCode })
       })
       
@@ -178,9 +185,16 @@ export default function AdminPaymentMethodsPage() {
 
   const toggleMethodStatus = async (methodId: number, currentStatus: boolean) => {
     try {
+      // Get CSRF token
+      const csrfResponse = await fetch('/api/csrf-token')
+      const { csrfToken } = await csrfResponse.json()
+      
       const response = await fetch(`/api/payment-methods/${methodId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
         body: JSON.stringify({ active: !currentStatus }),
       })
 
@@ -211,9 +225,16 @@ export default function AdminPaymentMethodsPage() {
 
       if (editingMethod) {
         // Mode modification - mettre à jour le compte bancaire existant
+        // Get CSRF token
+        const csrfResponse = await fetch('/api/csrf-token')
+        const { csrfToken } = await csrfResponse.json()
+        
         const response = await fetch('/api/bank-accounts', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-csrf-token': csrfToken
+          },
           body: JSON.stringify({
             bankId: selectedBank.id,
             countryId: selectedCountryData.id,
@@ -229,9 +250,16 @@ export default function AdminPaymentMethodsPage() {
         }
       } else {
         // Mode association - créer nouvelle association
+        // Get CSRF token
+        const csrfResponse = await fetch('/api/csrf-token')
+        const { csrfToken } = await csrfResponse.json()
+        
         const response = await fetch('/api/payment-methods/associate-banks', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-csrf-token': csrfToken
+          },
           body: JSON.stringify({
             bankId: selectedBank.id,
             countryId: selectedCountryData.id,
@@ -476,12 +504,6 @@ export default function AdminPaymentMethodsPage() {
     <AdminLayout user={user} onLogout={logout}>
       <ContentLoader loading={loading}>
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-[#0B3371]">Moyens de Paiement</h1>
-              <p className="text-gray-600 mt-1">Gestion des méthodes de paiement et des banques</p>
-            </div>
-          </div>
 
           <div className="bg-gradient-to-r from-[#0B3371]/5 to-blue-50 rounded-2xl p-6 mb-6">
             <div className="flex items-center space-x-4 mb-4">
@@ -687,9 +709,16 @@ export default function AdminPaymentMethodsPage() {
                         if (!selectedCountryData) return
                         
                         try {
+                          // Get CSRF token
+                          const csrfResponse = await fetch('/api/csrf-token')
+                          const { csrfToken } = await csrfResponse.json()
+                          
                           const response = await fetch('/api/payment-methods/create-flutterwave', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 
+                              'Content-Type': 'application/json',
+                              'x-csrf-token': csrfToken
+                            },
                             body: JSON.stringify({ countryId: selectedCountryData.id })
                           })
                           

@@ -43,6 +43,15 @@ export default function PhoneInput({
     }
   }, [countries, selectedCountry])
 
+  // Réinitialiser le pays sélectionné si la liste des pays change
+  useEffect(() => {
+    if (countries.length === 0) {
+      setSelectedCountry(null)
+    } else if (selectedCountry && !countries.find(c => c.id === selectedCountry.id)) {
+      setSelectedCountry(countries[0])
+    }
+  }, [countries, selectedCountry])
+
   useEffect(() => {
     if (value && value.includes(' ')) {
       const [code, ...numberParts] = value.split(' ')
@@ -84,15 +93,33 @@ export default function PhoneInput({
         <div className="relative">
           <button
             type="button"
-            onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center px-3 py-3 border border-r-0 border-gray-200 rounded-l-xl bg-white/80 backdrop-blur-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+            onClick={() => countries.length > 0 && setIsOpen(!isOpen)}
+            disabled={countries.length === 0}
+            className={`flex items-center px-3 py-3 border border-r-0 border-gray-200 rounded-l-xl bg-white/80 backdrop-blur-sm transition-all duration-200 ${
+              countries.length === 0 
+                ? 'opacity-50 cursor-not-allowed' 
+                : 'hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            }`}
           >
-            <span className="text-lg mr-2">{selectedCountry?.flag}</span>
-            <span className="text-sm font-medium">+{selectedCountry?.callingCode}</span>
+            {selectedCountry ? (
+              <>
+                <img 
+                  src={selectedCountry.flag} 
+                  alt={`${selectedCountry.name} flag`}
+                  className="w-6 h-4 object-cover rounded border mr-2"
+                  onError={(e) => {
+                    e.currentTarget.src = '/placeholder-flag.png'
+                  }}
+                />
+                <span className="text-sm font-medium">+{selectedCountry.callingCode}</span>
+              </>
+            ) : (
+              <span className="text-sm text-gray-400">Code</span>
+            )}
             <ChevronDown className="h-4 w-4 ml-1 text-gray-400" />
           </button>
 
-          {isOpen && (
+          {isOpen && countries.length > 0 && (
             <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
               {countries.map((country) => (
                 <button
@@ -101,7 +128,14 @@ export default function PhoneInput({
                   onClick={() => handleCountrySelect(country)}
                   className="w-full flex items-center px-4 py-3 hover:bg-gray-50 text-left transition-colors"
                 >
-                  <span className="text-lg mr-3">{country.flag}</span>
+                  <img 
+                    src={country.flag} 
+                    alt={`${country.name} flag`}
+                    className="w-6 h-4 object-cover rounded border mr-3"
+                    onError={(e) => {
+                      e.currentTarget.src = '/placeholder-flag.svg'
+                    }}
+                  />
                   <div className="flex-1">
                     <div className="font-medium text-gray-900">{country.name}</div>
                     <div className="text-sm text-gray-500">+{country.callingCode}</div>
@@ -117,8 +151,11 @@ export default function PhoneInput({
           type="tel"
           value={phoneNumber}
           onChange={handlePhoneChange}
-          placeholder={placeholder}
-          className="flex-1 px-4 py-3 border border-gray-200 rounded-r-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm"
+          placeholder={countries.length === 0 ? "Sélectionnez d'abord une région" : placeholder}
+          disabled={countries.length === 0 || !selectedCountry}
+          className={`flex-1 px-4 py-3 border border-gray-200 rounded-r-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm ${
+            countries.length === 0 || !selectedCountry ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
         />
       </div>
 

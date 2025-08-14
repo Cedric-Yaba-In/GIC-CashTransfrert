@@ -53,6 +53,9 @@ model Country {
   bankAccounts BankAccount[]
   senderTransactions Transaction[] @relation("SenderTransactions")
   receiverTransactions Transaction[] @relation("ReceiverTransactions")
+  senderCorridors   TransferCorridor[] @relation("SenderCorridors")
+  receiverCorridors TransferCorridor[] @relation("ReceiverCorridors")
+  countryRates      CountryTransferRate[]
 
   @@map("countries")
 }
@@ -304,4 +307,79 @@ enum TicketPriority {
   NORMAL
   HIGH
   URGENT
+}
+
+model TransferRate {
+  id                Int      @id @default(autoincrement())
+  name              String   @db.VarChar(191)
+  description       String?  @db.Text
+  baseFee           Decimal  @default(0)
+  percentageFee     Decimal  @default(0)
+  minAmount         Decimal  @default(0)
+  maxAmount         Decimal?
+  exchangeRateMargin Decimal @default(0)
+  active            Boolean  @default(true)
+  isDefault         Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  countryRates      CountryTransferRate[]
+  corridorRates     TransferCorridor[]
+
+  @@map("transfer_rates")
+}
+
+model CountryTransferRate {
+  id              Int      @id @default(autoincrement())
+  countryId       Int
+  transferRateId  Int
+  baseFee         Decimal?
+  percentageFee   Decimal?
+  minAmount       Decimal?
+  maxAmount       Decimal?
+  exchangeRateMargin Decimal?
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  country         Country      @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  transferRate    TransferRate @relation(fields: [transferRateId], references: [id], onDelete: Cascade)
+
+  @@unique([countryId, transferRateId])
+  @@map("country_transfer_rates")
+}
+
+model TransferCorridor {
+  id                Int      @id @default(autoincrement())
+  senderCountryId   Int
+  receiverCountryId Int
+  transferRateId    Int?
+  baseFee           Decimal?
+  percentageFee     Decimal?
+  minAmount         Decimal?
+  maxAmount         Decimal?
+  exchangeRateMargin Decimal?
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  senderCountry     Country       @relation("SenderCorridors", fields: [senderCountryId], references: [id], onDelete: Cascade)
+  receiverCountry   Country       @relation("ReceiverCorridors", fields: [receiverCountryId], references: [id], onDelete: Cascade)
+  transferRate      TransferRate? @relation(fields: [transferRateId], references: [id])
+
+  @@unique([senderCountryId, receiverCountryId])
+  @@map("transfer_corridors")
+}
+
+model ExchangeRate {
+  id              Int      @id @default(autoincrement())
+  fromCurrency    String   @db.VarChar(10)
+  toCurrency      String   @db.VarChar(10)
+  rate            Decimal  @db.Decimal(18, 8)
+  source          String   @db.VarChar(50)
+  lastUpdated     DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@unique([fromCurrency, toCurrency])
+  @@map("exchange_rates")
 }

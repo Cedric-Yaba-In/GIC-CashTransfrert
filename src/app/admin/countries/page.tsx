@@ -112,7 +112,7 @@ export default function AdminCountriesPage() {
     
     setLoadingRegionCountries(true)
     try {
-      const response = await fetch(`/api/regions/${region}/countries`)
+      const response = await fetch(`/api/regions/${region}/external-countries`)
       const data = await response.json()
       setRegionCountries(Array.isArray(data) ? data : [])
     } catch (error) {
@@ -158,9 +158,16 @@ export default function AdminCountriesPage() {
         selectedCountries.has(country.cca2)
       )
 
+      // Get CSRF token
+      const csrfResponse = await fetch('/api/csrf-token')
+      const { csrfToken } = await csrfResponse.json()
+      
       const response = await fetch('/api/countries', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
         body: JSON.stringify({ countries: countriesToAdd }),
       })
 
@@ -206,9 +213,16 @@ export default function AdminCountriesPage() {
 
   const toggleCountryStatus = async (countryId: number, currentStatus: boolean) => {
     try {
+      // Get CSRF token
+      const csrfResponse = await fetch('/api/csrf-token')
+      const { csrfToken } = await csrfResponse.json()
+      
       const response = await fetch(`/api/countries/${countryId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
         body: JSON.stringify({ active: !currentStatus }),
       })
 
@@ -355,9 +369,16 @@ export default function AdminCountriesPage() {
       
       setConfiguring(paymentMethodId)
       try {
+        // Get CSRF token
+        const csrfResponse = await fetch('/api/csrf-token')
+        const { csrfToken } = await csrfResponse.json()
+        
         const response = await fetch(`/api/countries/${selectedCountryConfig.id}/categories`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-csrf-token': csrfToken
+          },
           body: JSON.stringify({ categories: [paymentMethodId] })
         })
         
@@ -386,9 +407,16 @@ export default function AdminCountriesPage() {
     // Pour les autres méthodes, procéder normalement
     setConfiguring(paymentMethodId)
     try {
+      // Get CSRF token
+      const csrfResponse = await fetch('/api/csrf-token')
+      const { csrfToken } = await csrfResponse.json()
+      
       const response = await fetch(`/api/countries/${selectedCountryConfig.id}/payment-methods`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
         body: JSON.stringify({ paymentMethodId })
       })
       
@@ -420,9 +448,16 @@ export default function AdminCountriesPage() {
     
     setRemoving(paymentMethodId)
     try {
+      // Get CSRF token
+      const csrfResponse = await fetch('/api/csrf-token')
+      const { csrfToken } = await csrfResponse.json()
+      
       const response = await fetch(`/api/countries/${selectedCountryConfig.id}/payment-methods`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
         body: JSON.stringify({ paymentMethodId })
       })
       

@@ -41,7 +41,6 @@ async function getFlutterwaveBalance(currencyCode: string): Promise<number | nul
       }
       
       const generalData = await generalResponse.json()
-      
       if (generalData.status !== 'success') {
         console.error('Réponse Flutterwave non réussie (général):', generalData)
         return null

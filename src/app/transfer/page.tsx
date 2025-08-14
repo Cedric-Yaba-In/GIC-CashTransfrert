@@ -9,6 +9,8 @@ import { useToast } from '@/components/ToastProvider'
 import { ArrowLeft, Send, User, Mail, Phone, MapPin, CreditCard, CheckCircle, AlertCircle, Globe, DollarSign } from 'lucide-react'
 import PhoneInput from '../../components/PhoneInput'
 import CountrySelect from '../../components/CountrySelect'
+import PaymentMethodCard from '../../components/PaymentMethodCard'
+import TransferProgress from '../../components/TransferProgress'
 
 interface Region {
   id: string
@@ -39,6 +41,22 @@ interface PaymentMethodAvailability {
   maxAmount: number | null
 }
 
+interface FeeCalculation {
+  amount: number
+  baseFee: number
+  percentageFee: number
+  totalFees: number
+  totalAmount: number
+  exchangeRate: number
+  receivedAmount: number
+  senderCurrency: string
+  receiverCurrency: string
+  breakdown: {
+    baseFee: { amount: number; currency: string; description: string }
+    percentageFee: { amount: number; currency: string; description: string }
+  }
+}
+
 interface TransferForm {
   senderName: string
   senderEmail: string
@@ -61,6 +79,7 @@ export default function TransferPage() {
   const [senderCountries, setSenderCountries] = useState<Country[]>([])
   const [receiverCountries, setReceiverCountries] = useState<Country[]>([])
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PaymentMethodAvailability[]>([])
+  const [feeCalculation, setFeeCalculation] = useState<FeeCalculation | null>(null)
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(1)
 
@@ -71,6 +90,12 @@ export default function TransferPage() {
   const senderCountryId = watch('senderCountryId')
   const receiverCountryId = watch('receiverCountryId')
   const amount = watch('amount')
+  const paymentMethodId = watch('paymentMethodId')
+  const senderName = watch('senderName')
+  const senderEmail = watch('senderEmail')
+  const senderPhone = watch('senderPhone')
+  const receiverName = watch('receiverName')
+  const receiverPhone = watch('receiverPhone')
 
   useEffect(() => {
     fetchRegions()
@@ -79,12 +104,18 @@ export default function TransferPage() {
   useEffect(() => {
     if (senderRegion) {
       fetchCountriesByRegion(senderRegion, 'sender')
+    } else {
+      setSenderCountries([])
+      setValue('senderCountryId', '')
     }
   }, [senderRegion])
 
   useEffect(() => {
     if (receiverRegion) {
       fetchCountriesByRegion(receiverRegion, 'receiver')
+    } else {
+      setReceiverCountries([])
+      setValue('receiverCountryId', '')
     }
   }, [receiverRegion])
 
@@ -94,13 +125,20 @@ export default function TransferPage() {
     }
   }, [senderCountryId, receiverCountryId, amount])
 
+  useEffect(() => {
+    if (senderCountryId && receiverCountryId && amount) {
+      calculateFees()
+    }
+  }, [senderCountryId, receiverCountryId, amount])
+
   const fetchRegions = async () => {
     try {
       const response = await fetch('/api/regions')
       const data = await response.json()
-      setRegions(data)
+      setRegions(Array.isArray(data) ? data : [])
     } catch (error) {
       toast.error('Erreur de chargement', 'Impossible de charger les régions')
+      setRegions([])
     }
   }
 
@@ -108,38 +146,74 @@ export default function TransferPage() {
     try {
       const response = await fetch(`/api/regions/${regionCode}/countries`)
       const data = await response.json()
+      const countries = Array.isArray(data) ? data : []
       
       if (type === 'sender') {
-        setSenderCountries(data)
+        setSenderCountries(countries)
+        // Réinitialiser le pays sélectionné si il n'est plus dans la liste
+        if (senderCountryId && !countries.find(c => c.id === senderCountryId)) {
+          setValue('senderCountryId', '')
+        }
       } else {
-        setReceiverCountries(data)
+        setReceiverCountries(countries)
+        // Réinitialiser le pays sélectionné si il n'est plus dans la liste
+        if (receiverCountryId && !countries.find(c => c.id === receiverCountryId)) {
+          setValue('receiverCountryId', '')
+        }
       }
     } catch (error) {
       toast.error('Erreur de chargement', 'Impossible de charger les pays')
+      if (type === 'sender') {
+        setSenderCountries([])
+        setValue('senderCountryId', '')
+      } else {
+        setReceiverCountries([])
+        setValue('receiverCountryId', '')
+      }
     }
   }
 
   const fetchPaymentMethods = async () => {
     try {
-      const response = await fetch(`/api/payment-methods?senderCountryId=${senderCountryId}&receiverCountryId=${receiverCountryId}&amount=${amount}`)
+      const response = await fetch(`/api/transfer/payment-methods?senderCountryId=${senderCountryId}&receiverCountryId=${receiverCountryId}&amount=${amount}`)
       const data = await response.json()
-      setAvailablePaymentMethods(data)
+      setAvailablePaymentMethods(Array.isArray(data) ? data : [])
     } catch (error) {
       toast.error('Erreur de chargement', 'Impossible de charger les moyens de paiement')
+      setAvailablePaymentMethods([])
+    }
+  }
+
+  const calculateFees = async () => {
+    try {
+      const response = await fetch(`/api/transfer/calculate-fees?senderCountryId=${senderCountryId}&receiverCountryId=${receiverCountryId}&amount=${amount}`)
+      const data = await response.json()
+      if (response.ok) {
+        setFeeCalculation(data)
+      }
+    } catch (error) {
+      console.error('Erreur calcul des frais:', error)
     }
   }
 
   const onSubmit = async (data: TransferForm) => {
     setLoading(true)
     try {
+      // Get CSRF token
+      const csrfResponse = await fetch('/api/csrf-token')
+      const { csrfToken } = await csrfResponse.json()
+      
       const response = await fetch('/api/transactions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
         body: JSON.stringify({
           ...data,
           amount: parseFloat(data.amount.toString()),
-          totalAmount: parseFloat(data.amount.toString()) + 5, // Frais fixes de 5
-          fees: 5,
+          totalAmount: feeCalculation?.totalAmount || (parseFloat(data.amount.toString()) + 5),
+          fees: feeCalculation?.totalFees || 5,
         }),
       })
 
@@ -200,27 +274,24 @@ export default function TransferPage() {
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           {/* Progress Steps */}
           <div className="bg-gradient-to-r from-primary-50 to-secondary-50 px-8 py-6">
-            <div className="flex items-center justify-center max-w-md mx-auto">
-              <div className={`flex items-center ${step >= 1 ? 'text-primary-600' : 'text-gray-400'}`}>
-                <div className={`relative w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${
-                  step >= 1 ? 'bg-primary-600 text-white shadow-lg scale-110' : 'bg-gray-200 text-gray-500'
-                }`}>
-                  {step > 1 ? <CheckCircle className="h-5 w-5" /> : '1'}
-                </div>
-                <span className="ml-3 font-medium">Informations</span>
-              </div>
-              <div className={`flex-1 h-1 mx-6 rounded-full transition-all duration-500 ${
-                step >= 2 ? 'bg-primary-600' : 'bg-gray-200'
-              }`}></div>
-              <div className={`flex items-center ${step >= 2 ? 'text-primary-600' : 'text-gray-400'}`}>
-                <div className={`relative w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${
-                  step >= 2 ? 'bg-primary-600 text-white shadow-lg scale-110' : 'bg-gray-200 text-gray-500'
-                }`}>
-                  2
-                </div>
-                <span className="ml-3 font-medium">Paiement</span>
-              </div>
-            </div>
+            <TransferProgress
+              currentStep={step}
+              totalSteps={2}
+              steps={[
+                {
+                  id: 1,
+                  title: 'Informations',
+                  description: 'Détails du transfert',
+                  status: step > 1 ? 'completed' : step === 1 ? 'current' : 'pending'
+                },
+                {
+                  id: 2,
+                  title: 'Paiement',
+                  description: 'Méthode de paiement',
+                  status: step === 2 ? 'current' : 'pending'
+                }
+              ]}
+            />
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="p-8">
@@ -276,21 +347,6 @@ export default function TransferPage() {
                         </p>
                       )}
                     </div>
-                    <div>
-                      <PhoneInput
-                        value={watch('senderPhone') || ''}
-                        onChange={(value) => setValue('senderPhone', value)}
-                        countries={senderCountries}
-                        label="Téléphone"
-                        required
-                        error={errors.senderPhone?.message}
-                        placeholder="123 456 789"
-                      />
-                      <input
-                        {...register('senderPhone', { required: 'Téléphone requis' })}
-                        type="hidden"
-                      />
-                    </div>
                     <div className="space-y-2">
                       <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
                         <Globe className="h-4 w-4 mr-2 text-gray-500" />
@@ -313,6 +369,21 @@ export default function TransferPage() {
                           {errors.senderRegion.message}
                         </p>
                       )}
+                    </div>
+                    <div>
+                      <PhoneInput
+                        value={watch('senderPhone') || ''}
+                        onChange={(value) => setValue('senderPhone', value)}
+                        countries={senderCountries}
+                        label="Téléphone"
+                        required
+                        error={errors.senderPhone?.message}
+                        placeholder="123 456 789"
+                      />
+                      <input
+                        {...register('senderPhone', { required: 'Téléphone requis' })}
+                        type="hidden"
+                      />
                     </div>
                     <div className="lg:col-span-2 space-y-2">
                       <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
@@ -389,21 +460,6 @@ export default function TransferPage() {
                         placeholder="email@destinataire.com"
                       />
                     </div>
-                    <div>
-                      <PhoneInput
-                        value={watch('receiverPhone') || ''}
-                        onChange={(value) => setValue('receiverPhone', value)}
-                        countries={receiverCountries}
-                        label="Téléphone"
-                        required
-                        error={errors.receiverPhone?.message}
-                        placeholder="123 456 789"
-                      />
-                      <input
-                        {...register('receiverPhone', { required: 'Téléphone requis' })}
-                        type="hidden"
-                      />
-                    </div>
                     <div className="space-y-2">
                       <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
                         <Globe className="h-4 w-4 mr-2 text-gray-500" />
@@ -426,6 +482,21 @@ export default function TransferPage() {
                           {errors.receiverRegion.message}
                         </p>
                       )}
+                    </div>
+                    <div>
+                      <PhoneInput
+                        value={watch('receiverPhone') || ''}
+                        onChange={(value) => setValue('receiverPhone', value)}
+                        countries={receiverCountries}
+                        label="Téléphone"
+                        required
+                        error={errors.receiverPhone?.message}
+                        placeholder="123 456 789"
+                      />
+                      <input
+                        {...register('receiverPhone', { required: 'Téléphone requis' })}
+                        type="hidden"
+                      />
                     </div>
                     <div className="lg:col-span-2 space-y-2">
                       <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
@@ -515,20 +586,93 @@ export default function TransferPage() {
                               {amount} {senderCountries.find(c => c.id === senderCountryId)?.currencyCode}
                             </span>
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600">Frais de service:</span>
-                            <span className="font-semibold">
-                              5 {senderCountries.find(c => c.id === senderCountryId)?.currencyCode}
-                            </span>
-                          </div>
-                          <div className="border-t pt-3">
-                            <div className="flex justify-between items-center">
-                              <span className="text-lg font-bold text-gray-900">Total à payer:</span>
-                              <span className="text-2xl font-bold text-primary-600">
-                                {parseFloat(amount?.toString() || '0') + 5} {senderCountries.find(c => c.id === senderCountryId)?.currencyCode}
-                              </span>
+                          {feeCalculation ? (
+                            <>
+                              {/* Informations sur le taux appliqué */}
+                              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-medium text-blue-700">Taux appliqué:</span>
+                                  <span className="text-xs font-bold text-blue-800">{feeCalculation.rateInfo.name}</span>
+                                </div>
+                                <div className="text-xs text-blue-600 mt-1">
+                                  Priorité {feeCalculation.rateInfo.priority} - {feeCalculation.rateInfo.type === 'corridor' ? 'Corridor spécifique' : feeCalculation.rateInfo.type === 'country' ? 'Taux par pays' : 'Taux global'}
+                                </div>
+                              </div>
+                              
+                              {/* Détail des frais */}
+                              <div className="flex justify-between items-center">
+                                <span className="text-gray-600">{feeCalculation.fees.baseFee.description}:</span>
+                                <span className="font-semibold text-red-600">
+                                  -{feeCalculation.fees.baseFee.amount} {feeCalculation.fees.baseFee.currency}
+                                </span>
+                              </div>
+                              {feeCalculation.fees.percentageFee.amount > 0 && (
+                                <div className="flex justify-between items-center">
+                                  <span className="text-gray-600">{feeCalculation.fees.percentageFee.description}:</span>
+                                  <span className="font-semibold text-red-600">
+                                    -{Number(feeCalculation.fees.percentageFee.amount || 0).toFixed(2)} {feeCalculation.fees.percentageFee.currency}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex justify-between items-center border-t pt-2">
+                                <span className="font-medium text-gray-800">Total des frais:</span>
+                                <span className="font-bold text-red-600">
+                                  -{Number(feeCalculation.fees.total.amount || 0).toFixed(2)} {feeCalculation.fees.total.currency}
+                                </span>
+                              </div>
+                              
+                              {/* Taux de change */}
+                              {feeCalculation.senderCurrency !== feeCalculation.receiverCurrency && (
+                                <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-xs text-green-700">Taux marché:</span>
+                                    <span className="text-xs font-medium text-green-800">
+                                      1 {feeCalculation.senderCurrency} = {Number(feeCalculation.exchange.marketRate || 0).toFixed(4)} {feeCalculation.receiverCurrency}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-xs text-green-700">Taux appliqué (marge {feeCalculation.exchange.margin}%):</span>
+                                    <span className="text-xs font-bold text-green-800">
+                                      1 {feeCalculation.senderCurrency} = {Number(feeCalculation.exchange.appliedRate || 0).toFixed(4)} {feeCalculation.receiverCurrency}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-xs text-green-700">Marge sur change:</span>
+                                    <span className="text-xs font-medium text-green-600">
+                                      +{Number(feeCalculation.exchange.marginAmount || 0).toFixed(2)} {feeCalculation.senderCurrency}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Montants finaux */}
+                              <div className="border-t pt-3 space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-lg font-bold text-gray-900">Vous payez:</span>
+                                  <span className="text-2xl font-bold text-primary-600">
+                                    {Number(feeCalculation.summary.totalPaid || 0).toFixed(2)} {feeCalculation.senderCurrency}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-gray-600">Le destinataire reçoit:</span>
+                                  <span className="text-lg font-bold text-green-600">
+                                    {Number(feeCalculation.summary.amountReceived || 0).toFixed(2)} {feeCalculation.receiverCurrency}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center text-xs">
+                                  <span className="text-gray-500">Notre revenu total:</span>
+                                  <span className="font-medium text-gray-600">
+                                    {Number(feeCalculation.summary.totalRevenue || 0).toFixed(2)} {feeCalculation.senderCurrency}
+                                  </span>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-center py-4">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mx-auto"></div>
+                              <p className="text-sm text-gray-500 mt-2">Calcul des frais...</p>
                             </div>
-                          </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -538,11 +682,38 @@ export default function TransferPage() {
                 <div className="flex justify-center pt-8">
                   <button
                     type="button"
-                    onClick={() => setStep(2)}
-                    disabled={!senderCountryId || !receiverCountryId || !amount || availablePaymentMethods.length === 0}
+                    onClick={() => {
+                      // Vérifier que tous les champs requis sont remplis
+                      const isFormValid = senderName && senderEmail && senderPhone && senderRegion && senderCountryId && 
+                                         receiverName && receiverPhone && receiverRegion && receiverCountryId && amount
+                      
+                      if (isFormValid) {
+                        // Rediriger vers la page de paiement avec les données
+                        const transferData = {
+                          senderName,
+                          senderEmail,
+                          senderPhone,
+                          senderRegion,
+                          senderCountryId,
+                          receiverName,
+                          receiverPhone: watch('receiverPhone'),
+                          receiverEmail: watch('receiverEmail'),
+                          receiverRegion,
+                          receiverCountryId,
+                          amount,
+                          feeCalculation
+                        }
+                        
+                        // Stocker temporairement les données
+                        sessionStorage.setItem('transferData', JSON.stringify(transferData))
+                        router.push('/transfer/payment')
+                      }
+                    }}
+                    disabled={!senderName || !senderEmail || !senderPhone || !senderRegion || !senderCountryId || 
+                             !receiverName || !receiverPhone || !receiverRegion || !receiverCountryId || !amount}
                     className="px-8 py-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center"
                   >
-                    Continuer vers le paiement
+                    Continuer le paiement
                     <Send className="ml-2 h-5 w-5" />
                   </button>
                 </div>
@@ -566,47 +737,20 @@ export default function TransferPage() {
                   {availablePaymentMethods.length > 0 ? (
                     <div className="grid gap-4">
                       {availablePaymentMethods.map(method => (
-                        <label key={method.paymentMethodId} className={`group relative flex items-center p-6 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                          !method.available 
-                            ? 'opacity-50 cursor-not-allowed border-gray-200 bg-gray-50' 
-                            : 'border-gray-200 bg-white/80 backdrop-blur-sm hover:border-orange-300 hover:shadow-md'
-                        }`}>
-                          <input
-                            {...register('paymentMethodId', { required: 'Méthode de paiement requise' })}
-                            type="radio"
-                            value={method.paymentMethodId}
-                            disabled={!method.available}
-                            className="w-5 h-5 text-orange-600 border-gray-300 focus:ring-orange-500 mr-4"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center">
-                                <CreditCard className="h-5 w-5 mr-2 text-gray-500" />
-                                <p className="font-semibold text-gray-900">{method.paymentMethodName}</p>
-                              </div>
-                              {method.available ? (
-                                <div className="flex items-center px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Disponible
-                                </div>
-                              ) : (
-                                <div className="flex items-center px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
-                                  <AlertCircle className="h-4 w-4 mr-1" />
-                                  Indisponible
-                                </div>
-                              )}
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                              <div>
-                                <span className="font-medium">Limites:</span> {method.minAmount} - {method.maxAmount || 'Illimité'}
-                              </div>
-                              <div>
-                                <span className="font-medium">Solde disponible:</span> {method.balance} {receiverCountries.find(c => c.id === receiverCountryId)?.currencyCode}
-                              </div>
-                            </div>
-                          </div>
-                        </label>
+                        <PaymentMethodCard
+                          key={method.paymentMethodId}
+                          method={method}
+                          isSelected={paymentMethodId === method.paymentMethodId}
+                          onSelect={() => setValue('paymentMethodId', method.paymentMethodId)}
+                          disabled={!method.available}
+                          currency={receiverCountries.find(c => c.id === receiverCountryId)?.currencyCode || 'N/A'}
+                        />
                       ))}
+                      <input
+                        {...register('paymentMethodId', { required: 'Méthode de paiement requise' })}
+                        type="hidden"
+                        value={paymentMethodId || ''}
+                      />
                     </div>
                   ) : (
                     <div className="text-center py-8">

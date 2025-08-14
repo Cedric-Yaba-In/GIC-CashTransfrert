@@ -1,4 +1,6 @@
 // Service pour récupérer les banques depuis des APIs externes
+import { sanitizeForLog } from './security'
+
 export class ExternalBanksAPI {
   
   // API pour les banques françaises (exemple avec une API fictive)
@@ -21,7 +23,7 @@ export class ExternalBanksAPI {
         source: 'API'
       }))
     } catch (error) {
-      console.error('Erreur API banques françaises:', error)
+      console.error('Erreur API banques françaises:', sanitizeForLog(error))
       return []
     }
   }
@@ -46,7 +48,7 @@ export class ExternalBanksAPI {
         source: 'API'
       })) || []
     } catch (error) {
-      console.error('Erreur API banques américaines:', error)
+      console.error('Erreur API banques américaines:', sanitizeForLog(error))
       return []
     }
   }
@@ -78,7 +80,7 @@ export class ExternalBanksAPI {
       
       return Array.from(uniqueBanks.values())
     } catch (error) {
-      console.error('Erreur API banques britanniques:', error)
+      console.error('Erreur API banques britanniques:', sanitizeForLog(error))
       return []
     }
   }
@@ -97,7 +99,7 @@ export class ExternalBanksAPI {
       // Pour l'exemple, on retourne un tableau vide et on se base sur Flutterwave + données manuelles
       return []
     } catch (error) {
-      console.error(`Erreur API banques pour ${countryCode}:`, error)
+      console.error(`Erreur API banques pour ${countryCode}:`, sanitizeForLog(error))
       return []
     }
   }

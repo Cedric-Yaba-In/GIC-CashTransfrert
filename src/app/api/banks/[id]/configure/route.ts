@@ -1,13 +1,23 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { validateNumericId, sanitizeInput, sanitizeForLog, validateCSRFRequest } from '@/lib/security'
+import { createCSRFError } from '@/lib/csrf'
 
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    if (!validateCSRFRequest(request as any)) {
+      return createCSRFError()
+    }
+
     const { accountNumber, accountName, iban, beneficiaryAddress, active } = await request.json()
-    const bankId = parseInt(params.id)
+    const bankId = validateNumericId(params.id)
+    
+    if (!bankId) {
+      return NextResponse.json({ error: 'ID banque invalide' }, { status: 400 })
+    }
 
     const bank = await prisma.bank.findUnique({
       where: { id: bankId }
@@ -20,26 +30,26 @@ export async function POST(
     const config = await prisma.bankConfiguration.upsert({
       where: { bankId },
       update: {
-        accountNumber,
-        accountName,
-        iban,
-        beneficiaryAddress,
+        accountNumber: sanitizeInput(accountNumber),
+        accountName: sanitizeInput(accountName),
+        iban: sanitizeInput(iban),
+        beneficiaryAddress: sanitizeInput(beneficiaryAddress),
         active: active ?? true,
         updatedAt: new Date()
       },
       create: {
         bankId,
-        accountNumber,
-        accountName,
-        iban,
-        beneficiaryAddress,
+        accountNumber: sanitizeInput(accountNumber),
+        accountName: sanitizeInput(accountName),
+        iban: sanitizeInput(iban),
+        beneficiaryAddress: sanitizeInput(beneficiaryAddress),
         active: active ?? true
       }
     })
 
     return NextResponse.json(config)
   } catch (error) {
-    console.error('Erreur configuration banque:', error)
+    console.error('Erreur configuration banque:', sanitizeForLog(error))
     return NextResponse.json({ error: 'Erreur de configuration' }, { status: 500 })
   }
 }
@@ -49,7 +59,11 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const bankId = parseInt(params.id)
+    const bankId = validateNumericId(params.id)
+    
+    if (!bankId) {
+      return NextResponse.json({ error: 'ID banque invalide' }, { status: 400 })
+    }
 
     const config = await prisma.bankConfiguration.findUnique({
       where: { bankId },
@@ -60,7 +74,7 @@ export async function GET(
 
     return NextResponse.json(config)
   } catch (error) {
-    console.error('Erreur récupération config:', error)
+    console.error('Erreur récupération config:', sanitizeForLog(error))
     return NextResponse.json(null)
   }
 }

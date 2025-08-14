@@ -1,4 +1,5 @@
 import { prisma } from './prisma'
+import { sanitizeForLog } from './security'
 
 export interface PaymentMethodAvailability {
   paymentMethodId: number
@@ -19,6 +20,13 @@ export async function getAvailablePaymentMethods(
   amount: number
 ): Promise<PaymentMethodAvailability[]> {
   try {
+    // Validate inputs
+    if (!Number.isInteger(senderCountryId) || senderCountryId <= 0 ||
+        !Number.isInteger(receiverCountryId) || receiverCountryId <= 0 ||
+        !Number.isFinite(amount) || amount <= 0) {
+      return []
+    }
+
     // Get sender country payment methods
     const senderCountryMethods = await prisma.countryPaymentMethod.findMany({
       where: {
@@ -91,7 +99,7 @@ export async function getAvailablePaymentMethods(
     })
 
   } catch (error) {
-    console.error('Error getting available payment methods:', error)
+    console.error('Error getting available payment methods:', sanitizeForLog(error))
     return []
   }
 }
@@ -102,6 +110,13 @@ export async function checkWalletBalance(
   amount: number
 ): Promise<boolean> {
   try {
+    // Validate inputs
+    if (!Number.isInteger(countryId) || countryId <= 0 ||
+        !Number.isInteger(paymentMethodId) || paymentMethodId <= 0 ||
+        !Number.isFinite(amount) || amount <= 0) {
+      return false
+    }
+
     const wallet = await prisma.wallet.findUnique({
       where: { countryId },
       include: {
@@ -121,7 +136,7 @@ export async function checkWalletBalance(
 
     return wallet.subWallets[0].balance.toNumber() >= amount
   } catch (error) {
-    console.error('Error checking wallet balance:', error)
+    console.error('Error checking wallet balance:', sanitizeForLog(error))
     return false
   }
 }
@@ -133,6 +148,14 @@ export async function updateWalletBalances(
   amount: number
 ) {
   try {
+    // Validate inputs
+    if (!Number.isInteger(senderCountryId) || senderCountryId <= 0 ||
+        !Number.isInteger(receiverCountryId) || receiverCountryId <= 0 ||
+        !Number.isInteger(paymentMethodId) || paymentMethodId <= 0 ||
+        !Number.isFinite(amount) || amount <= 0) {
+      return { success: false, error: 'Invalid parameters' }
+    }
+
     await prisma.$transaction(async (tx) => {
       // Debit receiver country sub-wallet
       const receiverWallet = await tx.wallet.findUnique({
@@ -219,7 +242,7 @@ export async function updateWalletBalances(
 
     return { success: true }
   } catch (error) {
-    console.error('Error updating wallet balances:', error)
-    return { success: false, error }
+    console.error('Error updating wallet balances:', sanitizeForLog(error))
+    return { success: false, error: 'Database error' }
   }
 }

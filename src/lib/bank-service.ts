@@ -1,5 +1,6 @@
 import { ConfigService } from './config'
 import { prisma } from './prisma'
+import { sanitizeForLog } from './security'
 
 interface BankData {
   name: string
@@ -194,7 +195,7 @@ export class BankService {
           })
           result.api++
         } catch (error) {
-          result.errors.push(`API externe ${bank.name}: ${error}`)
+          result.errors.push(`API externe ${bank.name}: ${sanitizeForLog(error)}`)
         }
       }
 
@@ -230,7 +231,7 @@ export class BankService {
           })
           result.flutterwave++
         } catch (error) {
-          result.errors.push(`Flutterwave ${bank.name}: ${error}`)
+          result.errors.push(`Flutterwave ${bank.name}: ${sanitizeForLog(error)}`)
         }
       }
 

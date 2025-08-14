@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode } from 'react'
 import Toast, { ToastProps } from './Toast'
+import { sanitizeForLog } from '@/lib/security'
 
 interface ToastContextType {
   showToast: (toast: Omit<ToastProps, 'id' | 'onClose'>) => void
@@ -40,7 +41,7 @@ export default function ToastProvider({ children }: ToastProviderProps) {
       onClose: removeToast
     }
     
-    console.log('Toast créé:', newToast)
+    console.log('Toast créé:', sanitizeForLog(newToast))
     setToasts(prev => {
       const newToasts = [...prev, newToast]
       console.log('Toasts actuels:', newToasts.length)
