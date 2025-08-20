@@ -403,10 +403,10 @@ export default function AdminPaymentMethodsPage() {
     console.log('BANK_TRANSFER methods:', paymentMethods.filter(m => m.type === 'BANK_TRANSFER'))
     console.log('PaymentMethods for country', selectedCountry, ':', paymentMethods.filter(m => m.countryCode === selectedCountry))
     
-    // Tab Hybride : affiché seulement si Flutterwave est activé pour ce pays
+    // Tab Hybride : affiché si Flutterwave ou CinetPay est activé pour ce pays
     const selectedCountryData = countries.find(c => c.code === selectedCountry)
-    const flutterwaveMethod = paymentMethods.find(m => {
-      if (m.category === 'HYBRID' && (m.name === 'Flutterwave' || m.type === 'FLUTTERWAVE')) {
+    const hybridMethods = paymentMethods.filter(m => {
+      if (m.category === 'HYBRID' && (m.type === 'FLUTTERWAVE' || m.type === 'CINETPAY')) {
         // Vérifier si la méthode est associée au pays sélectionné
         return m.countries && m.countries.some((country: any) => 
           country.countryId === selectedCountryData?.id
@@ -415,13 +415,13 @@ export default function AdminPaymentMethodsPage() {
       return false
     })
     
-    if (flutterwaveMethod) {
+    if (hybridMethods.length > 0) {
       const categoryConfig = PAYMENT_CATEGORIES.HYBRID
       tabs.push({ 
         id: 'HYBRID' as TabType, 
         name: categoryConfig.name, 
         icon: Globe, 
-        count: 1, 
+        count: hybridMethods.length, 
         color: categoryConfig.color 
       })
     }
@@ -611,37 +611,46 @@ export default function AdminPaymentMethodsPage() {
               <div className="p-6">
                 {(() => {
                   const selectedCountryData = countries.find(c => c.code === selectedCountry)
-                  return paymentMethods.find(m => {
-                    if (m.category === 'HYBRID' && (m.name === 'Flutterwave' || m.type === 'FLUTTERWAVE')) {
+                  return paymentMethods.filter(m => {
+                    if (m.category === 'HYBRID' && (m.type === 'FLUTTERWAVE' || m.type === 'CINETPAY')) {
                       return m.countries && m.countries.some((country: any) => 
                         country.countryId === selectedCountryData?.id
                       )
                     }
                     return false
                   })
-                })() ? (
+                })().length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {(() => {
                       const selectedCountryData = countries.find(c => c.code === selectedCountry)
-                      const flutterwaveMethod = paymentMethods.find(m => {
-                        if (m.category === 'HYBRID' && (m.name === 'Flutterwave' || m.type === 'FLUTTERWAVE')) {
+                      return paymentMethods.filter(m => {
+                        if (m.category === 'HYBRID' && (m.type === 'FLUTTERWAVE' || m.type === 'CINETPAY')) {
                           return m.countries && m.countries.some((country: any) => 
                             country.countryId === selectedCountryData?.id
                           )
                         }
                         return false
                       })
-                      return flutterwaveMethod ? [flutterwaveMethod] : []
                     })().map((method) => (
                       <div key={method.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-[#F37521]/10 to-[#F37521]/20 rounded-xl flex items-center justify-center">
-                              <Globe className="w-5 h-5 text-[#F37521]" />
+                            <div className={`w-10 h-10 bg-gradient-to-br rounded-xl flex items-center justify-center ${
+                              method.type === 'CINETPAY' 
+                                ? 'from-[#F37521]/10 to-[#F37521]/20' 
+                                : 'from-blue-500/10 to-blue-500/20'
+                            }`}>
+                              <Globe className={`w-5 h-5 ${
+                                method.type === 'CINETPAY' ? 'text-[#F37521]' : 'text-blue-500'
+                              }`} />
                             </div>
                             <div>
                               <h3 className="font-semibold text-gray-900">{method.name}</h3>
-                              <p className="text-sm text-[#F37521]/70">API Flutterwave</p>
+                              <p className={`text-sm ${
+                                method.type === 'CINETPAY' ? 'text-[#F37521]/70' : 'text-blue-500/70'
+                              }`}>
+                                API {method.type === 'CINETPAY' ? 'CinetPay' : 'Flutterwave'}
+                              </p>
                             </div>
                           </div>
                           
@@ -684,13 +693,29 @@ export default function AdminPaymentMethodsPage() {
                             <span>Modifier</span>
                           </button>
                           
-                          <button className={`flex-1 flex items-center justify-center space-x-2 py-2 px-3 rounded-lg transition-colors text-sm ${
-                            method.isConfigured 
-                              ? 'bg-[#F37521]/10 hover:bg-[#F37521]/20 text-[#F37521] border border-[#F37521]/20'
-                              : 'bg-[#F37521] hover:bg-[#F37521]/90 text-white'
-                          }`}>
+                          <button 
+                            onClick={async () => {
+                              try {
+                                const endpoint = method.type === 'CINETPAY' ? '/api/cinetpay/sync' : '/api/flutterwave/sync'
+                                const response = await fetch(endpoint, { method: 'POST' })
+                                const result = await response.json()
+                                if (response.ok) {
+                                  toast.success('Synchronisation réussie', result.message)
+                                } else {
+                                  toast.error('Erreur de synchronisation', result.error)
+                                }
+                              } catch (error) {
+                                toast.error('Erreur', 'Impossible de synchroniser les soldes')
+                              }
+                            }}
+                            className={`flex-1 flex items-center justify-center space-x-2 py-2 px-3 rounded-lg transition-colors text-sm ${
+                              method.type === 'CINETPAY'
+                                ? 'bg-[#F37521]/10 hover:bg-[#F37521]/20 text-[#F37521] border border-[#F37521]/20'
+                                : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 border border-blue-500/20'
+                            }`}
+                          >
                             <Settings className="w-4 h-4" />
-                            <span>{method.isConfigured ? 'Reconfigurer' : 'Configurer'}</span>
+                            <span>Synchroniser soldes</span>
                           </button>
                         </div>
                       </div>
@@ -702,42 +727,80 @@ export default function AdminPaymentMethodsPage() {
                       <Globe className="w-8 h-8 text-gray-400" />
                     </div>
                     <p className="text-gray-500 mb-4">Aucune méthode hybride configurée</p>
-                    <p className="text-sm text-gray-400 mb-6">Flutterwave et autres APIs</p>
-                    <button
-                      onClick={async () => {
-                        const selectedCountryData = countries.find(c => c.code === selectedCountry)
-                        if (!selectedCountryData) return
-                        
-                        try {
-                          // Get CSRF token
-                          const csrfResponse = await fetch('/api/csrf-token')
-                          const { csrfToken } = await csrfResponse.json()
+                    <p className="text-sm text-gray-400 mb-6">Flutterwave, CinetPay et autres APIs</p>
+                    <div className="flex space-x-4 justify-center">
+                      <button
+                        onClick={async () => {
+                          const selectedCountryData = countries.find(c => c.code === selectedCountry)
+                          if (!selectedCountryData) return
                           
-                          const response = await fetch('/api/payment-methods/create-flutterwave', {
-                            method: 'POST',
-                            headers: { 
-                              'Content-Type': 'application/json',
-                              'x-csrf-token': csrfToken
-                            },
-                            body: JSON.stringify({ countryId: selectedCountryData.id })
-                          })
-                          
-                          if (response.ok) {
-                            toast.success('Flutterwave activé', 'Flutterwave a été activé pour ce pays')
-                            await fetchData()
-                          } else {
-                            const error = await response.json()
-                            toast.error('Erreur', error.error)
+                          try {
+                            // Get CSRF token
+                            const csrfResponse = await fetch('/api/csrf-token')
+                            const { csrfToken } = await csrfResponse.json()
+                            
+                            const response = await fetch('/api/payment-methods/create-flutterwave', {
+                              method: 'POST',
+                              headers: { 
+                                'Content-Type': 'application/json',
+                                'x-csrf-token': csrfToken
+                              },
+                              body: JSON.stringify({ countryId: selectedCountryData.id })
+                            })
+                            
+                            if (response.ok) {
+                              toast.success('Flutterwave activé', 'Flutterwave a été activé pour ce pays')
+                              await fetchData()
+                            } else {
+                              const error = await response.json()
+                              toast.error('Erreur', error.error)
+                            }
+                          } catch (error) {
+                            toast.error('Erreur de connexion', 'Impossible d\'activer Flutterwave')
                           }
-                        } catch (error) {
-                          toast.error('Erreur de connexion', 'Impossible d\'activer Flutterwave')
-                        }
-                      }}
-                      className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-[#F37521] to-[#F37521]/90 text-white hover:from-[#F37521]/90 hover:to-[#F37521]/80 rounded-lg font-medium transition-all shadow-lg hover:shadow-orange-200 mx-auto"
-                    >
-                      <Globe className="w-4 h-4" />
-                      <span>Activer Flutterwave</span>
-                    </button>
+                        }}
+                        className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 rounded-lg font-medium transition-all shadow-lg hover:shadow-blue-200"
+                      >
+                        <Globe className="w-4 h-4" />
+                        <span>Activer Flutterwave</span>
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const selectedCountryData = countries.find(c => c.code === selectedCountry)
+                          if (!selectedCountryData) return
+                          
+                          try {
+                            // Get CSRF token
+                            const csrfResponse = await fetch('/api/csrf-token')
+                            const { csrfToken } = await csrfResponse.json()
+                            
+                            // Créer CinetPay pour ce pays (endpoint à créer)
+                            const response = await fetch('/api/payment-methods/create-cinetpay', {
+                              method: 'POST',
+                              headers: { 
+                                'Content-Type': 'application/json',
+                                'x-csrf-token': csrfToken
+                              },
+                              body: JSON.stringify({ countryId: selectedCountryData.id })
+                            })
+                            
+                            if (response.ok) {
+                              toast.success('CinetPay activé', 'CinetPay a été activé pour ce pays')
+                              await fetchData()
+                            } else {
+                              const error = await response.json()
+                              toast.error('Erreur', error.error)
+                            }
+                          } catch (error) {
+                            toast.error('Erreur de connexion', 'Impossible d\'activer CinetPay')
+                          }
+                        }}
+                        className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-[#F37521] to-[#F37521]/90 text-white hover:from-[#F37521]/90 hover:to-[#F37521]/80 rounded-lg font-medium transition-all shadow-lg hover:shadow-orange-200"
+                      >
+                        <Globe className="w-4 h-4" />
+                        <span>Activer CinetPay</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

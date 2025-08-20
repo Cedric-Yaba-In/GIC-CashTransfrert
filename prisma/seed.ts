@@ -60,7 +60,15 @@ export async function seedDatabase() {
         type: 'FLUTTERWAVE',
         category: 'HYBRID',
         minAmount: 10,
-        maxAmount: 10000,
+        maxAmount: 10000000,
+        active: true,
+      },
+      {
+        name: 'CinetPay',
+        type: 'CINETPAY',
+        category: 'HYBRID',
+        minAmount: 1000,
+        maxAmount: 10000000,
         active: true,
       },
       {
@@ -68,7 +76,7 @@ export async function seedDatabase() {
         type: 'MOBILE_MONEY',
         category: 'MOBILE_MONEY',
         minAmount: 5,
-        maxAmount: 5000,
+        maxAmount: 1000000,
         active: true,
       },
       {
@@ -76,7 +84,7 @@ export async function seedDatabase() {
         type: 'BANK_TRANSFER',
         category: 'BANK_TRANSFER',
         minAmount: 50,
-        maxAmount: 50000,
+        maxAmount: 10000000,
         active: true,
       }
     ]
@@ -115,6 +123,13 @@ export async function seedDatabase() {
       { key: 'FLUTTERWAVE_SECRET_KEY', value: '', category: 'payment', type: 'PASSWORD', label: 'Flutterwave Secret Key', required: false, encrypted: true },
       { key: 'FLUTTERWAVE_WEBHOOK_HASH', value: '', category: 'payment', type: 'PASSWORD', label: 'Flutterwave Webhook Hash', required: false, encrypted: true },
       { key: 'FLUTTERWAVE_ENCRYPTION_KEY', value: '', category: 'payment', type: 'PASSWORD', label: 'Flutterwave Encryption Key', required: false, encrypted: true },
+      
+      // CinetPay Configuration
+      { key: 'CINETPAY_API_KEY', value: '', category: 'cinetpay', type: 'PASSWORD', label: 'Clé API CinetPay', required: false, encrypted: true },
+      { key: 'CINETPAY_SITE_ID', value: '', category: 'cinetpay', type: 'PASSWORD', label: 'Site ID CinetPay', required: false, encrypted: true },
+      { key: 'CINETPAY_SECRET_KEY', value: '', category: 'cinetpay', type: 'PASSWORD', label: 'Clé secrète CinetPay', required: false, encrypted: true },
+      { key: 'CINETPAY_API_PASSWORD', value: '', category: 'cinetpay', type: 'PASSWORD', label: 'Mot de passe API CinetPay', required: false, encrypted: true },
+      { key: 'CINETPAY_NOTIFY_URL', value: 'http://localhost:3000/api/cinetpay/callback', category: 'cinetpay', type: 'STRING', label: 'URL de notification CinetPay', required: false },
       
       // RestCountries API
       { key: 'RESTCOUNTRIES_API_URL', value: 'https://restcountries.com/v3.1', category: 'api', type: 'STRING', label: 'RestCountries API URL', required: true },
@@ -174,9 +189,9 @@ export async function seedDatabase() {
     console.log('✅ Base de données initialisée avec succès!')
     console.log('📝 Utilisateur admin: admin@gicpromoteltd.com / admin123')
     console.log('🌍 Régions créées: 5')
-    console.log('💳 Méthodes de paiement: 3')
+    console.log('💳 Méthodes de paiement: 4 (Flutterwave, CinetPay, Mobile Money, Virement)')
     console.log('🏦 Banques importées')
-    console.log('⚙️ Configurations par défaut créées')
+    console.log('⚙️ Configurations par défaut créées (incluant CinetPay)')
     console.log('💰 Taux de transfert par défaut créé')
     
   } catch (error) {

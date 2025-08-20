@@ -60,14 +60,23 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       }
     })
 
-    // Si la transaction est approuvée et que le moyen de réception est Flutterwave, déclencher le transfert
-    if (status === 'APPROVED' && transaction.receiverPaymentMethod?.type === 'FLUTTERWAVE') {
+    // Si la transaction est approuvée, déclencher le transfert automatique selon le moyen de réception
+    if (status === 'APPROVED') {
       try {
-        const { flutterwaveService } = await import('@/lib/flutterwave')
-        const transferResult = await flutterwaveService.processTransferToReceiver(transactionId)
+        let transferResult = { success: false, error: 'Méthode non supportée' }
+        
+        if (transaction.receiverPaymentMethod?.type === 'FLUTTERWAVE') {
+          const { flutterwaveService } = await import('@/lib/flutterwave')
+          transferResult = await flutterwaveService.processTransferToReceiver(transactionId)
+          console.log('Flutterwave transfer result:', transferResult)
+        } else if (transaction.receiverPaymentMethod?.type === 'CINETPAY') {
+          const { cinetPayService } = await import('@/lib/cinetpay')
+          transferResult = await cinetPayService.processTransferToReceiver(transactionId)
+          console.log('CinetPay transfer result:', transferResult)
+        }
         
         if (transferResult.success) {
-          console.log('Automatic Flutterwave transfer completed')
+          console.log('Automatic transfer completed successfully')
         } else {
           console.error('Automatic transfer failed:', transferResult.error)
           

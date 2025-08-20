@@ -36,6 +36,10 @@ async function getFlutterwaveBalance(currencyCode: string): Promise<number | nul
       })
       
       if (!generalResponse.ok) {
+        if (generalResponse.status === 401) {
+          console.error('Erreur API Flutterwave: Clé API invalide ou expirée')
+          return null
+        }
         console.error('Erreur API Flutterwave (général):', generalResponse.status, generalResponse.statusText)
         return null
       }
@@ -58,6 +62,10 @@ async function getFlutterwaveBalance(currencyCode: string): Promise<number | nul
     }
 
     if (!response.ok) {
+      if (response.status === 401) {
+        console.error('Erreur API Flutterwave: Clé API invalide ou expirée')
+        return null
+      }
       console.error('Erreur API Flutterwave (spécifique):', response.status, response.statusText)
       return null
     }

@@ -103,6 +103,7 @@ model Transaction {
   status                TransactionStatus @default(PENDING)
   paymentProof          String?           @db.VarChar(191)
   flutterwaveRef        String?           @db.VarChar(191)
+  cinetpayRef           String?           @db.VarChar(191)
   paidAt                DateTime?
   receiverSubMethod     String?           @db.VarChar(50)
   adminNotes            String?           @db.Text
@@ -258,6 +259,7 @@ enum PaymentMethodType {
   API
   MANUAL
   FLUTTERWAVE
+  CINETPAY
   BANK_TRANSFER
   MOBILE_MONEY
 }

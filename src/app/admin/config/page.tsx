@@ -48,8 +48,17 @@ const categoryConfig = {
   },
   payment: {
     icon: CreditCard,
-    title: 'Paiements',
-    description: 'Configuration des passerelles de paiement',
+    title: 'Flutterwave',
+    description: 'Configuration de la passerelle Flutterwave',
+    bgColor: 'from-blue-600 to-blue-700',
+    lightBg: 'bg-blue-50',
+    borderColor: 'border-blue-200',
+    testable: true
+  },
+  cinetpay: {
+    icon: CreditCard,
+    title: 'CinetPay',
+    description: 'Configuration de la passerelle CinetPay',
     bgColor: 'from-[#F37521] to-[#F37521]/80',
     lightBg: 'bg-[#F37521]/5',
     borderColor: 'border-[#F37521]/20',
@@ -224,6 +233,7 @@ export default function ConfigPage() {
   // Debug: afficher les catégories disponibles
   console.log('Catégories disponibles:', Object.keys(groupedConfigs))
   console.log('Configurations groupées:', groupedConfigs)
+  console.log('Configs brutes:', configs.map(c => ({ key: c.key, category: c.category })))
 
 
 
@@ -233,34 +243,45 @@ export default function ConfigPage() {
         {/* Actions */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            <button
-              onClick={async () => {
-                setSyncing(true)
-                try {
-                  const response = await fetch('/api/admin/sync-all', { method: 'POST' })
-                  const result = await response.json()
-                  if (response.ok) {
-                    toast.success('Synchronisation complète', result.message)
-                    fetchConfigs()
-                  } else {
-                    toast.error('Erreur', result.error)
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  console.log('Force reload configs')
+                  fetchConfigs()
+                }}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all"
+              >
+                <span>Recharger</span>
+              </button>
+              <button
+                onClick={async () => {
+                  setSyncing(true)
+                  try {
+                    const response = await fetch('/api/admin/sync-all', { method: 'POST' })
+                    const result = await response.json()
+                    if (response.ok) {
+                      toast.success('Synchronisation complète', result.message)
+                      fetchConfigs()
+                    } else {
+                      toast.error('Erreur', result.error)
+                    }
+                  } catch (error) {
+                    toast.error('Erreur', 'Impossible de synchroniser les données')
+                  } finally {
+                    setSyncing(false)
                   }
-                } catch (error) {
-                  toast.error('Erreur', 'Impossible de synchroniser les données')
-                } finally {
-                  setSyncing(false)
-                }
-              }}
-              disabled={syncing}
-              className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-[#0B3371] to-[#0B3371]/80 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50"
-            >
-              {syncing ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <Settings className="w-5 h-5" />
-              )}
-              <span>{syncing ? 'Synchronisation...' : 'Synchroniser'}</span>
-            </button>
+                }}
+                disabled={syncing}
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-[#0B3371] to-[#0B3371]/80 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50"
+              >
+                {syncing ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Settings className="w-5 h-5" />
+                )}
+                <span>{syncing ? 'Synchronisation...' : 'Synchroniser'}</span>
+              </button>
+            </div>
             <div className="flex items-center space-x-4">
               {changes.size > 0 && (
                 <div className="flex items-center space-x-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
@@ -292,8 +313,8 @@ export default function ConfigPage() {
         {/* Configuration Cards */}
         <div className="grid lg:grid-cols-2 gap-8">
           {Object.keys(groupedConfigs).length > 0 ? (
-            // Ordre des sections : app, business, payment, sms, email, api, security
-            ['app', 'business', 'payment', 'sms', 'email', 'api', 'security']
+            // Ordre des sections : app, business, payment, cinetpay, sms, email, api, security
+            ['app', 'business', 'payment', 'cinetpay', 'sms', 'email', 'api', 'security']
               .filter(category => groupedConfigs[category])
               .map((category) => {
               const categoryConfigs = groupedConfigs[category]

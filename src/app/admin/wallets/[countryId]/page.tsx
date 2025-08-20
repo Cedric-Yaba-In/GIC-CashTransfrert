@@ -212,8 +212,40 @@ export default function WalletDetailPage() {
                                     }
                                   }}
                                   disabled={syncLoading}
-                                  className="flex items-center space-x-2 px-3 py-2 bg-[#F37521] hover:bg-[#F37521]/90 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                                  className="flex items-center space-x-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
                                   title={`Synchroniser Flutterwave - ${wallet.country?.name || 'Pays'}`}
+                                >
+                                  <RefreshCw className={`w-4 h-4 ${syncLoading ? 'animate-spin' : ''}`} />
+                                  <span>Sync</span>
+                                </button>
+                              ) : subWallet.countryPaymentMethod?.paymentMethod?.type === 'CINETPAY' ? (
+                                <button
+                                  onClick={async () => {
+                                    setSyncLoading(true)
+                                    try {
+                                      const token = localStorage.getItem('adminToken')
+                                      const response = await fetch(`/api/admin/wallets/sync-cinetpay/${wallet.country?.id || wallet.countryId}`, {
+                                        method: 'POST',
+                                        headers: { 'Authorization': `Bearer ${token}` }
+                                      })
+                                      
+                                      if (response.ok) {
+                                        const result = await response.json()
+                                        toast.success('Synchronisation réussie', `Solde CinetPay synchronisé pour ${result.country}`)
+                                        fetchWallet()
+                                      } else {
+                                        const error = await response.json()
+                                        toast.error('Erreur de synchronisation', error.error)
+                                      }
+                                    } catch (error) {
+                                      toast.error('Erreur de connexion', 'Impossible de synchroniser le solde')
+                                    } finally {
+                                      setSyncLoading(false)
+                                    }
+                                  }}
+                                  disabled={syncLoading}
+                                  className="flex items-center space-x-2 px-3 py-2 bg-[#F37521] hover:bg-[#F37521]/90 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                                  title={`Synchroniser CinetPay - ${wallet.country?.name || 'Pays'}`}
                                 >
                                   <RefreshCw className={`w-4 h-4 ${syncLoading ? 'animate-spin' : ''}`} />
                                   <span>Sync</span>

@@ -115,6 +115,11 @@ class FlutterwaveService {
 
   private async getHeaders() {
     await this.loadConfig()
+    
+    if (!this.config.secretKey) {
+      throw new Error('Flutterwave secret key not configured')
+    }
+    
     return {
       'Authorization': `Bearer ${this.config.secretKey}`,
       'Content-Type': 'application/json'
@@ -123,13 +128,10 @@ class FlutterwaveService {
 
   async getPaymentMethods(currency: string): Promise<PaymentMethod[]> {
     try {
-      await this.loadConfig()
-      console.log('Getting payment methods for currency:', currency)
-      
       // Flutterwave n'a pas d'endpoint payment-methods
       // On retourne les méthodes supportées selon la devise
       const supportedMethods = this.getSupportedMethodsByCurrency(currency)
-      console.log('Supported methods for', currency, ':', supportedMethods)
+      console.log('Supported methods for', sanitizeForLog(currency), ':', supportedMethods)
       
       return supportedMethods
     } catch (error) {
@@ -192,9 +194,20 @@ class FlutterwaveService {
   async getBanks(country: string): Promise<any[]> {
     try {
       await this.loadConfig()
+      
+      if (!this.config.secretKey) {
+        console.error('Flutterwave secret key not configured')
+        return []
+      }
+      
       const response = await fetch(`${this.config.baseUrl}/banks/${country}`, {
         headers: await this.getHeaders()
       })
+
+      if (!response.ok) {
+        console.error(`Flutterwave API error: ${response.status} ${response.statusText}`)
+        return []
+      }
 
       const data = await response.json()
       
@@ -329,7 +342,50 @@ class FlutterwaveService {
   }
 
   generateTxRef(): string {
-    return `GIC_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    return `GIC_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
+  }
+
+  async getBalance(currency: string): Promise<number> {
+    try {
+      await this.loadConfig()
+      
+      if (!this.config.secretKey) {
+        console.error('Flutterwave secret key not configured')
+        return 0
+      }
+      
+      const response = await fetch(`${this.config.baseUrl}/balances/${currency}`, {
+        headers: await this.getHeaders()
+      })
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          // Try general balances endpoint
+          const generalResponse = await fetch(`${this.config.baseUrl}/balances`, {
+            headers: await this.getHeaders()
+          })
+          
+          if (generalResponse.ok) {
+            const data = await generalResponse.json()
+            if (data.status === 'success' && Array.isArray(data.data)) {
+              const balance = data.data.find((b: any) => b.currency === currency)
+              return balance ? parseFloat(balance.available_balance) || 0 : 0
+            }
+          }
+        }
+        return 0
+      }
+
+      const data = await response.json()
+      if (data.status === 'success' && data.data) {
+        return parseFloat(data.data.available_balance) || 0
+      }
+      
+      return 0
+    } catch (error) {
+      console.error('Error getting Flutterwave balance:', sanitizeForLog(error))
+      return 0
+    }
   }
 
   async processTransferToReceiver(transactionId: number): Promise<{ success: boolean; error?: string }> {
@@ -533,4 +589,5 @@ class FlutterwaveService {
 }
 
 export const flutterwaveService = new FlutterwaveService()
+export { FlutterwaveService }
 export type { PaymentMethod, FlutterwavePaymentData, FlutterwaveResponse, FlutterwaveTransferData, FlutterwaveTransferResponse }

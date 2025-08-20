@@ -4,9 +4,9 @@
   "description": "GIC CashTransfer - Money transfer application by GIC Promote LTD",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "npm run db:push && npm run db:seed && next dev",
     "build": "prisma generate && next build",
-    "start": "next start",
+    "start": "npm run db:push && npm run db:seed && next start",
     "postinstall": "prisma generate",
     "lint": "next lint",
     "db:push": "prisma db push",

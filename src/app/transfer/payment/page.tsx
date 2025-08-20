@@ -178,6 +178,27 @@ export default function PaymentPage() {
           }
         }
         
+        // Si c'est une méthode CinetPay, traiter le paiement
+        if (selectedPaymentMethod?.paymentMethodType === 'CINETPAY') {
+          const paymentResponse = await fetch('/api/cinetpay/process-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transactionId: result.transaction.id })
+          })
+
+          const paymentResult = await paymentResponse.json()
+          
+          if (paymentResponse.ok && paymentResult.paymentUrl) {
+            // Rediriger vers CinetPay pour le paiement
+            sessionStorage.removeItem('transferData')
+            window.location.href = paymentResult.paymentUrl
+            return
+          } else {
+            toast.error('Erreur de paiement', paymentResult.error || 'Impossible de traiter le paiement')
+            return
+          }
+        }
+        
         // Pour les autres méthodes de paiement
         toast.success('Transaction créée', 'Votre transfert a été créé avec succès')
         sessionStorage.removeItem('transferData')
@@ -814,6 +835,20 @@ export default function PaymentPage() {
                     </div>
                   )}
                   
+                  {selectedPaymentMethod.paymentMethodType === 'CINETPAY' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="bg-orange-500 p-2 rounded-lg">
+                          <CreditCard className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-orange-900">Paiement sécurisé CinetPay</p>
+                          <p className="text-sm text-orange-700">Vous serez redirigé vers CinetPay pour finaliser le paiement</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   {selectedPaymentMethod.paymentMethodType === 'MOBILE_MONEY' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -877,6 +912,11 @@ export default function PaymentPage() {
                     ) : selectedPaymentMethod?.paymentMethodType === 'FLUTTERWAVE' ? (
                       <>
                         Payer avec Flutterwave
+                        <CreditCard className="ml-3 h-6 w-6" />
+                      </>
+                    ) : selectedPaymentMethod?.paymentMethodType === 'CINETPAY' ? (
+                      <>
+                        Payer avec CinetPay
                         <CreditCard className="ml-3 h-6 w-6" />
                       </>
                     ) : (

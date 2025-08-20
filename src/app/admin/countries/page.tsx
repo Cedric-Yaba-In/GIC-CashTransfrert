@@ -283,7 +283,7 @@ export default function AdminCountriesPage() {
 
   const fetchPaymentMethods = async () => {
     try {
-      const response = await fetch('/api/payment-methods')
+      const response = await fetch('/api/payment-methods/base')
       const data = await response.json()
       
       if (!Array.isArray(data)) {
@@ -291,34 +291,7 @@ export default function AdminCountriesPage() {
         return
       }
       
-      // Filtrer les méthodes configurées et actives
-      let configuredMethods = data.filter((method, index, self) => 
-        index === self.findIndex(m => m.id === method.id) &&
-        method.isConfigured === true &&
-        method.active === true
-      )
-      
-      // Pour BANK_TRANSFER : masquer l'instance de base si une instance spécifique au pays existe
-      if (selectedCountryConfig) {
-        const hasCountrySpecificBankTransfer = configuredMethods.some(m => 
-          m.type === 'BANK_TRANSFER' && 
-          m.countries && 
-          m.countries.some((country: any) => country.countryId === selectedCountryConfig.id)
-        )
-        
-        if (hasCountrySpecificBankTransfer) {
-          // Masquer l'instance de base (celle sans pays spécifique ou avec countries vide)
-          configuredMethods = configuredMethods.filter(m => {
-            if (m.type === 'BANK_TRANSFER') {
-              // Garder seulement les instances avec des pays spécifiques
-              return m.countries && m.countries.length > 0
-            }
-            return true
-          })
-        }
-      }
-      
-      setPaymentMethods(configuredMethods)
+      setPaymentMethods(data)
     } catch (error) {
       toast.error('Erreur de chargement', 'Impossible de charger les méthodes de paiement')
     }
@@ -975,26 +948,12 @@ export default function AdminCountriesPage() {
                   
                   {paymentMethods.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {paymentMethods.filter(method => {
-                        // Pour BANK_TRANSFER, masquer l'instance de base si une instance spécifique au pays existe
-                        if (method.type === 'BANK_TRANSFER') {
-                          const hasCountrySpecific = paymentMethods.some(m => 
-                            m.type === 'BANK_TRANSFER' && 
-                            m.countries && 
-                            m.countries.some((country: any) => country.countryId === selectedCountryConfig?.id)
-                          )
-                          if (hasCountrySpecific) {
-                            // Garder seulement les instances avec des pays spécifiques
-                            return method.countries && method.countries.length > 0
-                          }
-                        }
-                        return true
-                      }).map((method) => {
+                      {paymentMethods.map((method) => {
                         const configuredMethod = (selectedCountryConfig.paymentMethods || []).find(
                           (pm: any) => pm.paymentMethodId === method.id
                         )
                         const isConfigured = !!configuredMethod
-                        const isGlobalMethod = method.type === 'FLUTTERWAVE' // Méthodes configurées globalement
+                        const isGlobalMethod = method.isGlobal || method.type === 'FLUTTERWAVE' || method.type === 'CINETPAY'
                         
                         // Pour BANK_TRANSFER, vérifier s'il est déjà activé (même avec un autre ID)
                         const isBankTransferConfigured = method.type === 'BANK_TRANSFER' && 

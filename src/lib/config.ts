@@ -3,20 +3,29 @@ import crypto from 'crypto'
 
 const prisma = new PrismaClient()
 
-// Simple encryption for sensitive config values
+// Secure encryption for sensitive config values
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'your-32-char-encryption-key-here'
+const ALGORITHM = 'aes-256-cbc'
 
 function encrypt(text: string): string {
-  const cipher = crypto.createCipher('aes-256-cbc', ENCRYPTION_KEY)
+  const iv = crypto.randomBytes(16)
+  const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32)
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv)
   let encrypted = cipher.update(text, 'utf8', 'hex')
   encrypted += cipher.final('hex')
-  return encrypted
+  return iv.toString('hex') + ':' + encrypted
 }
 
 function decrypt(encryptedText: string): string {
   try {
-    const decipher = crypto.createDecipher('aes-256-cbc', ENCRYPTION_KEY)
-    let decrypted = decipher.update(encryptedText, 'hex', 'utf8')
+    const parts = encryptedText.split(':')
+    if (parts.length !== 2) return encryptedText // Return as-is if format is invalid
+    
+    const iv = Buffer.from(parts[0], 'hex')
+    const encrypted = parts[1]
+    const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32)
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv)
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8')
     decrypted += decipher.final('utf8')
     return decrypted
   } catch {
@@ -184,6 +193,16 @@ export class ConfigService {
       secretKey: await this.get('FLUTTERWAVE_SECRET_KEY'),
       webhookHash: await this.get('FLUTTERWAVE_WEBHOOK_HASH'),
       encryptionKey: await this.get('FLUTTERWAVE_ENCRYPTION_KEY')
+    }
+  }
+
+  static async getCinetPayConfig(): Promise<any> {
+    return {
+      apiKey: await this.get('CINETPAY_API_KEY'),
+      siteId: await this.get('CINETPAY_SITE_ID'),
+      secretKey: await this.get('CINETPAY_SECRET_KEY'),
+      apiPassword: await this.get('CINETPAY_API_PASSWORD'),
+      notifyUrl: await this.get('CINETPAY_NOTIFY_URL')
     }
   }
 }

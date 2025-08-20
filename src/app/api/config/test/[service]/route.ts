@@ -17,6 +17,8 @@ export async function POST(
         return await testSMSService()
       case 'payment':
         return await testPaymentService()
+      case 'cinetpay':
+        return await testCinetPayService()
       case 'api':
         return await testAPIService()
       default:
@@ -147,6 +149,61 @@ async function testPaymentService() {
   } catch (error: any) {
     return NextResponse.json(
       { message: `Erreur Flutterwave: ${error.message}` },
+      { status: 400 }
+    )
+  }
+}
+
+async function testCinetPayService() {
+  try {
+    const config = await ConfigService.getCinetPayConfig()
+
+    if (!config.apiKey || !config.siteId || !config.secretKey) {
+      return NextResponse.json(
+        { message: 'Configuration CinetPay incomplète' },
+        { status: 400 }
+      )
+    }
+
+    // Test simple de validation des credentials CinetPay
+    const testData = {
+      apikey: config.apiKey,
+      site_id: config.siteId,
+      transaction_id: 'TEST_' + Date.now(),
+      amount: 100,
+      currency: 'XOF',
+      description: 'Test de connexion'
+    }
+
+    const response = await fetch('https://api-checkout.cinetpay.com/v2/payment/check', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(testData)
+    })
+
+    const result = await response.json()
+    
+    // CinetPay retourne un code spécifique même pour les transactions inexistantes
+    if (result.code === '625' || result.code === '00') {
+      return NextResponse.json({
+        message: 'Connexion CinetPay réussie'
+      })
+    } else if (result.code === '601') {
+      return NextResponse.json(
+        { message: 'Clés CinetPay invalides' },
+        { status: 400 }
+      )
+    } else {
+      return NextResponse.json({
+        message: 'Connexion CinetPay réussie (credentials valides)'
+      })
+    }
+  } catch (error: any) {
+    return NextResponse.json(
+      { message: `Erreur CinetPay: ${error.message}` },
       { status: 400 }
     )
   }

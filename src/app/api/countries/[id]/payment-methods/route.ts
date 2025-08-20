@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { FlutterwaveService } from '@/lib/flutterwave'
+import { flutterwaveService } from '@/lib/flutterwave'
 
 export async function POST(
   request: Request,
@@ -54,12 +54,25 @@ export async function POST(
     let accountNumber = null
     let accountName = null
     
-    // Si c'est Flutterwave, récupérer le solde depuis l'API
+    // Si c'est Flutterwave ou CinetPay, récupérer le solde depuis l'API
     if (countryPaymentMethod.paymentMethod.type === 'FLUTTERWAVE') {
       const country = await prisma.country.findUnique({ where: { id: countryId } })
       if (country?.currencyCode) {
-        initialBalance = await FlutterwaveService.getBalance(country.currencyCode)
+        initialBalance = await flutterwaveService.getBalance(country.currencyCode)
         isReadOnly = true // Flutterwave est en lecture seule
+      }
+    } else if (countryPaymentMethod.paymentMethod.type === 'CINETPAY') {
+      // CinetPay fonctionne comme Flutterwave - solde synchronisé automatiquement
+      const country = await prisma.country.findUnique({ where: { id: countryId } })
+      if (country?.currencyCode) {
+        const { cinetPayService } = await import('@/lib/cinetpay')
+        try {
+          initialBalance = await cinetPayService.getBalance(country.currencyCode)
+        } catch (error) {
+          console.log('CinetPay balance not available, using 0')
+          initialBalance = 0
+        }
+        isReadOnly = true // CinetPay est en lecture seule
       }
     }
     
