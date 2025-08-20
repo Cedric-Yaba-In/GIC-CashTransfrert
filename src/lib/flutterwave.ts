@@ -269,7 +269,7 @@ class FlutterwaveService {
       console.error('Flutterwave transfer creation failed:', sanitizeForLog(data))
       return null
     } catch (error) {
-      if (error.message === 'IP_WHITELISTING_REQUIRED') {
+      if (error instanceof Error && error.message === 'IP_WHITELISTING_REQUIRED') {
         throw error
       }
       console.error('Error creating Flutterwave transfer:', sanitizeForLog(error))
@@ -439,7 +439,7 @@ class FlutterwaveService {
         transferData = {
           account_bank: 'MPS', // Mobile Payment Service
           account_number: receiverPaymentInfo.phoneNumber || transaction.receiverPhone,
-          amount: transaction.receiverAmount,
+          amount: transaction.amount.toNumber(),
           currency: transaction.receiverCountry.currency,
           narration: `Transfer from ${transaction.senderName}`,
           reference: `GIC_TRANSFER_${transaction.id}_${Date.now()}`
@@ -448,7 +448,7 @@ class FlutterwaveService {
         transferData = {
           account_bank: receiverPaymentInfo.bankCode,
           account_number: receiverPaymentInfo.accountNumber,
-          amount: transaction.receiverAmount,
+          amount: transaction.amount.toNumber(),
           currency: transaction.receiverCountry.currency,
           narration: `Transfer from ${transaction.senderName}`,
           reference: `GIC_TRANSFER_${transaction.id}_${Date.now()}`,
@@ -486,7 +486,7 @@ class FlutterwaveService {
           return { success: false, error: 'Transfer creation failed' }
         }
       } catch (error) {
-        if (error.message === 'IP_WHITELISTING_REQUIRED') {
+        if (error instanceof Error && error.message === 'IP_WHITELISTING_REQUIRED') {
           // Mark transaction for manual processing instead of failing
           await prisma.transaction.update({
             where: { id: transactionId },
@@ -507,7 +507,7 @@ class FlutterwaveService {
       }
     } catch (error) {
       console.error('Error processing transfer to receiver:', sanitizeForLog(error))
-      return { success: false, error: error.message || 'Transfer processing failed' }
+      return { success: false, error: error instanceof Error ? error.message : 'Transfer processing failed' }
     }
   }
 

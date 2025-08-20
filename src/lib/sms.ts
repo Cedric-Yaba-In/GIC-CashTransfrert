@@ -33,7 +33,7 @@ export class SMSService {
       return { success: true }
     } catch (error) {
       console.error('Error sending SMS confirmation:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: error instanceof Error ? error.message : String(error) }
     }
   }
 
@@ -53,7 +53,7 @@ export class SMSService {
       return { success: true }
     } catch (error) {
       console.error('Error sending SMS to receiver:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: error instanceof Error ? error.message : String(error) }
     }
   }
 }

@@ -31,13 +31,10 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
     
-    // Si c'est un taux par défaut, désactiver les autres (sauf si c'est une modification)
+    // Si c'est un taux par défaut, désactiver les autres
     if (data.isDefault) {
       await prisma.transferRate.updateMany({
-        where: { 
-          isDefault: true,
-          id: { not: editingRate?.id || 0 }
-        },
+        where: { isDefault: true },
         data: { isDefault: false }
       })
     }

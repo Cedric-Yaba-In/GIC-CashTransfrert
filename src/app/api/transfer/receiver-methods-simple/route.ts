@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
     console.log('Simple API called with:', { receiverCountryId, amount })
 
-    const validReceiverCountryId = validateNumericId(receiverCountryId)
+    const validReceiverCountryId = validateNumericId(receiverCountryId || undefined)
     const validAmount = validateAmount(amount)
 
     if (!validReceiverCountryId || !validAmount) {

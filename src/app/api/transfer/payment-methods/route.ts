@@ -10,8 +10,8 @@ export async function GET(request: NextRequest) {
     const amount = searchParams.get('amount')
 
     // Validation des paramètres
-    const validSenderCountryId = validateNumericId(senderCountryId)
-    const validReceiverCountryId = validateNumericId(receiverCountryId)
+    const validSenderCountryId = validateNumericId(senderCountryId || undefined)
+    const validReceiverCountryId = validateNumericId(receiverCountryId || undefined)
     const validAmount = validateAmount(amount)
 
     if (!validSenderCountryId || !validReceiverCountryId || !validAmount) {

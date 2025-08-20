@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({
       error: 'Test failed',
-      details: error.message
+      details: error instanceof Error ? error.message : String(error)
     })
   }
 }

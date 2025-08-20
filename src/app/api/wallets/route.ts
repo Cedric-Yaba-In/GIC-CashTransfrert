@@ -7,7 +7,7 @@ const prisma = new PrismaClient()
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const countryCode = validateQueryParam(searchParams.get('countryCode'))
+    const countryCode = validateQueryParam(searchParams.get('countryCode') || undefined)
 
     if (!countryCode) {
       return NextResponse.json(

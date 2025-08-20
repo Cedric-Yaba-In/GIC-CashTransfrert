@@ -99,7 +99,8 @@ export class TransferRateService {
       exchangeRateMargin: Number(exchangeRateMargin),
       finalExchangeRate: exchangeRate * (1 - Number(exchangeRateMargin) / 100),
       minAmount: Number(minAmount),
-      maxAmount: maxAmount ? Number(maxAmount) : null
+      maxAmount: maxAmount ? Number(maxAmount) : null,
+      source: 'corridor' as const
     }
   }
 
@@ -130,7 +131,8 @@ export class TransferRateService {
       exchangeRateMargin: Number(exchangeRateMargin),
       finalExchangeRate: exchangeRate * (1 - Number(exchangeRateMargin) / 100),
       minAmount: Number(minAmount),
-      maxAmount: maxAmount ? Number(maxAmount) : null
+      maxAmount: maxAmount ? Number(maxAmount) : null,
+      source: 'country' as const
     }
   }
 
@@ -153,7 +155,8 @@ export class TransferRateService {
       exchangeRateMargin: Number(globalRate.exchangeRateMargin),
       finalExchangeRate: exchangeRate * (1 - Number(globalRate.exchangeRateMargin) / 100),
       minAmount: Number(globalRate.minAmount),
-      maxAmount: globalRate.maxAmount ? Number(globalRate.maxAmount) : null
+      maxAmount: globalRate.maxAmount ? Number(globalRate.maxAmount) : null,
+      source: 'global' as const
     }
   }
 

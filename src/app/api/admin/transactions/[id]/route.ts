@@ -42,7 +42,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
     
     const updateData = { 
-      status: sanitizeInput(status), 
+      status: sanitizeInput(status) as any, 
       adminNotes: JSON.stringify(mergedNotes),
       updatedAt: new Date()
     }
@@ -63,7 +63,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     // Si la transaction est approuvée, déclencher le transfert automatique selon le moyen de réception
     if (status === 'APPROVED') {
       try {
-        let transferResult = { success: false, error: 'Méthode non supportée' }
+        let transferResult: { success: boolean; error?: string } = { success: false, error: 'Méthode non supportée' }
         
         if (transaction.receiverPaymentMethod?.type === 'FLUTTERWAVE') {
           const { flutterwaveService } = await import('@/lib/flutterwave')
@@ -105,7 +105,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
           data: {
             adminNotes: JSON.stringify({
               ...currentNotes,
-              criticalTransferError: transferError.message,
+              criticalTransferError: transferError instanceof Error ? transferError.message : String(transferError),
               requiresManualTransfer: true,
               errorTimestamp: new Date().toISOString()
             })

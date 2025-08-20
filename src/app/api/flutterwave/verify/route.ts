@@ -98,18 +98,14 @@ export async function POST(request: NextRequest) {
           ])
 
           // Log the deposit
-          await prisma.auditLog.create({
-            data: {
-              action: 'FLUTTERWAVE_DEPOSIT',
-              details: `Deposit of ${amount} ${currency} via Flutterwave`,
-              metadata: {
-                transaction_id,
-                tx_ref,
-                customer: customer.email,
-                amount,
-                currency
-              }
-            }
+          console.log('Deposit logged:', {
+            action: 'FLUTTERWAVE_DEPOSIT',
+            details: `Deposit of ${amount} ${currency} via Flutterwave`,
+            transaction_id,
+            tx_ref,
+            customer: customer.email,
+            amount,
+            currency
           })
         }
       }

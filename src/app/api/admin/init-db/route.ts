@@ -63,7 +63,7 @@ export async function POST() {
   } catch (error) {
     console.error('❌ Erreur lors de l\'initialisation:', error)
     return NextResponse.json(
-      { error: 'Erreur lors de l\'initialisation: ' + error.message },
+      { error: 'Erreur lors de l\'initialisation: ' + (error instanceof Error ? error.message : String(error)) },
       { status: 500 }
     )
   }

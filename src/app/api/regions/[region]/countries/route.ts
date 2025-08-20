@@ -29,7 +29,7 @@ export async function GET(
       currency: country.currency,
       currencyCode: country.currencyCode,
       flag: country.flag,
-      region: country.region.name,
+      region: country.region?.name || 'Unknown',
       callingCode: country.callingCode?.replace(/^\+/, '') || ''
     }))
 

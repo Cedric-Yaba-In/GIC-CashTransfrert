@@ -45,8 +45,7 @@ export async function POST(request: NextRequest) {
         if (transferResult.success) {
           return NextResponse.json({
             success: true,
-            message: 'Transaction approved and transfer completed automatically',
-            transferId: transferResult.transferId
+            message: 'Transaction approved and transfer completed automatically'
           })
         } else {
           return NextResponse.json({
@@ -77,8 +76,7 @@ export async function POST(request: NextRequest) {
       if (transferResult.success) {
         return NextResponse.json({
           success: true,
-          message: 'Transfer completed successfully',
-          transferId: transferResult.transferId
+          message: 'Transfer completed successfully'
         })
       } else {
         return NextResponse.json({

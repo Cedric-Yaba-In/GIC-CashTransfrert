@@ -59,7 +59,7 @@ export class PaymentCategoriesInitService {
     const created = []
     for (const category of categories) {
       const result = await prisma.paymentMethod.create({
-        data: category
+        data: category as any
       })
       created.push(result)
     }

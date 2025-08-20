@@ -17,21 +17,23 @@ async function seedPaymentCategories() {
       console.log(`📍 Setting up payment methods for ${country.name} (${country.code})`)
 
       // 1. Méthode Hybride - Flutterwave
-      const flutterwaveMethod = await prisma.paymentMethod.upsert({
-        where: { 
-          name: `Flutterwave ${country.code}`
-        },
-        update: {},
-        create: {
-          name: `Flutterwave ${country.code}`,
-          type: 'FLUTTERWAVE',
-          category: 'HYBRID',
-          subType: 'FLUTTERWAVE',
-          minAmount: 1,
-          maxAmount: 10000,
-          active: true
-        }
+      let flutterwaveMethod = await prisma.paymentMethod.findFirst({
+        where: { name: `Flutterwave ${country.code}` }
       })
+      
+      if (!flutterwaveMethod) {
+        flutterwaveMethod = await prisma.paymentMethod.create({
+          data: {
+            name: `Flutterwave ${country.code}`,
+            type: 'FLUTTERWAVE',
+            category: 'HYBRID',
+            subType: 'FLUTTERWAVE',
+            minAmount: 1,
+            maxAmount: 10000,
+            active: true
+          }
+        })
+      }
 
       // Associer au pays
       await prisma.countryPaymentMethod.upsert({
@@ -53,21 +55,23 @@ async function seedPaymentCategories() {
       // 2. Méthode Mobile Money (pour pays africains)
       if (['SN', 'CI', 'CM'].includes(country.code)) {
         // Orange Money
-        const orangeMethod = await prisma.paymentMethod.upsert({
-          where: { 
-            name: `Orange Money ${country.code}`
-          },
-          update: {},
-          create: {
-            name: `Orange Money ${country.code}`,
-            type: 'MOBILE_MONEY',
-            category: 'MOBILE_MONEY',
-            subType: 'ORANGE',
-            minAmount: 1,
-            maxAmount: 5000,
-            active: false // Non intégré
-          }
+        let orangeMethod = await prisma.paymentMethod.findFirst({
+          where: { name: `Orange Money ${country.code}` }
         })
+        
+        if (!orangeMethod) {
+          orangeMethod = await prisma.paymentMethod.create({
+            data: {
+              name: `Orange Money ${country.code}`,
+              type: 'MOBILE_MONEY',
+              category: 'MOBILE_MONEY',
+              subType: 'ORANGE',
+              minAmount: 1,
+              maxAmount: 5000,
+              active: false
+            }
+          })
+        }
 
         await prisma.countryPaymentMethod.upsert({
           where: {
@@ -86,21 +90,23 @@ async function seedPaymentCategories() {
         })
 
         // MTN Mobile Money
-        const mtnMethod = await prisma.paymentMethod.upsert({
-          where: { 
-            name: `MTN Mobile Money ${country.code}`
-          },
-          update: {},
-          create: {
-            name: `MTN Mobile Money ${country.code}`,
-            type: 'MOBILE_MONEY',
-            category: 'MOBILE_MONEY',
-            subType: 'MTN',
-            minAmount: 1,
-            maxAmount: 5000,
-            active: false // Non intégré
-          }
+        let mtnMethod = await prisma.paymentMethod.findFirst({
+          where: { name: `MTN Mobile Money ${country.code}` }
         })
+        
+        if (!mtnMethod) {
+          mtnMethod = await prisma.paymentMethod.create({
+            data: {
+              name: `MTN Mobile Money ${country.code}`,
+              type: 'MOBILE_MONEY',
+              category: 'MOBILE_MONEY',
+              subType: 'MTN',
+              minAmount: 1,
+              maxAmount: 5000,
+              active: false
+            }
+          })
+        }
 
         await prisma.countryPaymentMethod.upsert({
           where: {
@@ -119,22 +125,24 @@ async function seedPaymentCategories() {
         })
       }
 
-      // 3. Méthode Transfert Bancaire Global (pour activer l'onglet)
-      const bankTransferMethod = await prisma.paymentMethod.upsert({
-        where: { 
-          name: `Bank Transfer ${country.code}`
-        },
-        update: {},
-        create: {
-          name: `Bank Transfer ${country.code}`,
-          type: 'BANK_TRANSFER',
-          category: 'BANK_TRANSFER',
-          subType: 'GLOBAL',
-          minAmount: 10,
-          maxAmount: null,
-          active: true
-        }
+      // 3. Méthode Transfert Bancaire Global
+      let bankTransferMethod = await prisma.paymentMethod.findFirst({
+        where: { name: `Bank Transfer ${country.code}` }
       })
+      
+      if (!bankTransferMethod) {
+        bankTransferMethod = await prisma.paymentMethod.create({
+          data: {
+            name: `Bank Transfer ${country.code}`,
+            type: 'BANK_TRANSFER',
+            category: 'BANK_TRANSFER',
+            subType: 'GLOBAL',
+            minAmount: 10,
+            maxAmount: null,
+            active: true
+          }
+        })
+      }
 
       await prisma.countryPaymentMethod.upsert({
         where: {

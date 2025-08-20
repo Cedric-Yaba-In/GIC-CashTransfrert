@@ -136,7 +136,7 @@ export async function POST() {
   } catch (error) {
     console.error('❌ Erreur lors de la synchronisation:', error)
     return NextResponse.json(
-      { error: 'Erreur lors de la synchronisation: ' + error.message },
+      { error: 'Erreur lors de la synchronisation: ' + (error instanceof Error ? error.message : String(error)) },
       { status: 500 }
     )
   }

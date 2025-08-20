@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       receiverPaymentMethodId: data.receiverPaymentMethodId ? parseInt(data.receiverPaymentMethodId) : null,
       receiverSubMethod: data.receiverSubMethod || null,
       adminNotes: data.adminNotes || null,
-      status: 'PENDING',
+      status: 'PENDING' as any,
     }
     
     console.log('Transaction data to save:', transactionData)

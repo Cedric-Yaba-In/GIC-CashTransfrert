@@ -334,7 +334,7 @@ class CinetPayService {
         return { success: false, message: 'Échec de l\'authentification CinetPay' }
       }
     } catch (error) {
-      return { success: false, message: `Erreur de connexion: ${error.message}` }
+      return { success: false, message: `Erreur de connexion: ${error instanceof Error ? error.message : String(error)}` }
     }
   }
 
@@ -399,7 +399,7 @@ class CinetPayService {
       const adminNotes = transaction.adminNotes ? JSON.parse(transaction.adminNotes) : {}
       
       const transferData: CinetPayTransferData = {
-        amount: transaction.receiverAmount.toNumber(),
+        amount: transaction.amount.toNumber(),
         currency: transaction.receiverCountry.currencyCode,
         destination_country: transaction.receiverCountry.code,
         method: adminNotes.receiverSubMethod || 'ORANGE_MONEY_CI',
@@ -415,8 +415,7 @@ class CinetPayService {
         await prisma.transaction.update({
           where: { id: transactionId },
           data: {
-            status: 'COMPLETED',
-            completedAt: new Date(),
+            status: 'COMPLETED' as any,
             adminNotes: JSON.stringify({
               ...adminNotes,
               cinetpayTransferId: result.data.transaction_id,

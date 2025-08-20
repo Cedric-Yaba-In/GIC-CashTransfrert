@@ -14,21 +14,21 @@ export class NotificationService {
     try {
       // Email à l'expéditeur
       const emailResult = await EmailService.sendTransactionConfirmation(transaction)
-      results.email = emailResult
+      results.email = emailResult as any
 
       // SMS à l'expéditeur
       const smsResult = await SMSService.sendTransactionConfirmation(transaction)
-      results.sms = smsResult
+      results.sms = smsResult as any
 
       // Email au destinataire (si email fourni)
       if (transaction.receiverEmail) {
         const receiverEmailResult = await EmailService.sendReceiverNotification(transaction)
-        results.receiverEmail = receiverEmailResult
+        results.receiverEmail = receiverEmailResult as any
       }
 
       // SMS au destinataire
       const receiverSmsResult = await SMSService.sendReceiverNotification(transaction)
-      results.receiverSms = receiverSmsResult
+      results.receiverSms = receiverSmsResult as any
 
     } catch (error) {
       console.error('Notification service error:', sanitizeForLog(error))

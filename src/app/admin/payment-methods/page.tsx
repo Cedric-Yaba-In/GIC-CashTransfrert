@@ -519,7 +519,7 @@ export default function AdminPaymentMethodsPage() {
             <div className="flex items-center justify-between">
               <div className="w-80">
                 <CountrySelect
-                  countries={countries.map(c => ({ ...c, id: c.code }))}
+                  countries={countries.map(c => ({ ...c, id: c.code, region: null, callingCode: null })) as any}
                   value={selectedCountry}
                   onChange={setSelectedCountry}
                   placeholder="Sélectionner un pays"

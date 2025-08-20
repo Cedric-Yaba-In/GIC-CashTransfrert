@@ -69,9 +69,9 @@ export default function TransferSuccessPage() {
         </h1>
         
         <p className="text-gray-600 mb-6">
-          {transaction?.status === 'PAID' ? 
+          {(transaction as any)?.status === 'PAID' ? 
             'Votre paiement a été traité avec succès. Notre équipe va maintenant traiter le transfert vers le destinataire.' :
-            transaction?.status === 'COMPLETED' ?
+            (transaction as any)?.status === 'COMPLETED' ?
             'Votre transfert a été complété avec succès. Le destinataire a reçu les fonds.' :
             'Votre paiement a été traité avec succès. Votre transfert est en cours de traitement.'
           }
@@ -100,13 +100,13 @@ export default function TransferSuccessPage() {
           <div className="bg-blue-50 rounded-2xl p-4">
             <h3 className="font-semibold text-blue-900 mb-2">Prochaines étapes</h3>
             <ul className="text-sm text-blue-800 space-y-1">
-              {transaction?.status === 'PAID' ? (
+              {(transaction as any)?.status === 'PAID' ? (
                 <>
                   <li>• Votre paiement a été confirmé</li>
                   <li>• Notre équipe va traiter le transfert vers le destinataire</li>
                   <li>• Vous recevrez une notification une fois le transfert effectué</li>
                 </>
-              ) : transaction?.status === 'COMPLETED' ? (
+              ) : (transaction as any)?.status === 'COMPLETED' ? (
                 <>
                   <li>• ✓ Paiement confirmé</li>
                   <li>• ✓ Transfert effectué</li>

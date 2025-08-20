@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { FlutterwaveService } from '@/lib/flutterwave'
+import { flutterwaveService } from '@/lib/flutterwave'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,7 +35,7 @@ export async function POST() {
     for (const subWallet of flutterwaveSubWallets) {
       const country = subWallet.wallet.country
       if (country.currencyCode) {
-        const newBalance = await FlutterwaveService.getBalance(country.currencyCode)
+        const newBalance = await flutterwaveService.getBalance(country.currencyCode)
         
         if (newBalance !== subWallet.balance.toNumber()) {
           await prisma.subWallet.update({
@@ -48,7 +48,7 @@ export async function POST() {
     }
 
     // Recalculer les soldes totaux des wallets
-    const walletIds = [...new Set(flutterwaveSubWallets.map(sw => sw.walletId))]
+    const walletIds = Array.from(new Set(flutterwaveSubWallets.map(sw => sw.walletId)))
     
     for (const walletId of walletIds) {
       const subWallets = await prisma.subWallet.findMany({

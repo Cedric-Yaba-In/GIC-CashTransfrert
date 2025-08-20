@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
     await prisma.transaction.update({
       where: { id: transaction.id },
       data: { 
-        status: finalStatus,
+        status: finalStatus as any,
         adminNotes: JSON.stringify({
           ...JSON.parse(transaction.adminNotes || '{}'),
           paymentStatus: status,
@@ -126,6 +126,9 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Payment callback error:', sanitizeForLog(error))
+    
+    const { searchParams } = new URL(request.url)
+    const tx_ref = searchParams.get('tx_ref')
     
     if (tx_ref) {
       try {
@@ -145,7 +148,7 @@ export async function GET(request: NextRequest) {
               status: 'FAILED',
               adminNotes: JSON.stringify({
                 ...JSON.parse(transaction.adminNotes || '{}'),
-                callbackError: error.message,
+                callbackError: error instanceof Error ? error.message : String(error),
                 failureReason: 'Callback processing error'
               })
             }

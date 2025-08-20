@@ -629,32 +629,32 @@ export default function TransferPage() {
                               <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                                 <div className="flex items-center justify-between">
                                   <span className="text-xs font-medium text-blue-700">Taux appliqué:</span>
-                                  <span className="text-xs font-bold text-blue-800">{feeCalculation.rateInfo.name}</span>
+                                  <span className="text-xs font-bold text-blue-800">{(feeCalculation as any).rateInfo?.name || 'Standard'}</span>
                                 </div>
                                 <div className="text-xs text-blue-600 mt-1">
-                                  Priorité {feeCalculation.rateInfo.priority} - {feeCalculation.rateInfo.type === 'corridor' ? 'Corridor spécifique' : feeCalculation.rateInfo.type === 'country' ? 'Taux par pays' : 'Taux global'}
+                                  Priorité {(feeCalculation as any).rateInfo?.priority || 1} - {(feeCalculation as any).rateInfo?.type === 'corridor' ? 'Corridor spécifique' : (feeCalculation as any).rateInfo?.type === 'country' ? 'Taux par pays' : 'Taux global'}
                                 </div>
                               </div>
                               
                               {/* Détail des frais */}
                               <div className="flex justify-between items-center">
-                                <span className="text-gray-600">{feeCalculation.fees.baseFee.description}:</span>
+                                <span className="text-gray-600">{(feeCalculation as any).fees?.baseFee?.description || 'Frais de base'}:</span>
                                 <span className="font-semibold text-red-600">
-                                  -{feeCalculation.fees.baseFee.amount} {feeCalculation.fees.baseFee.currency}
+                                  -{(feeCalculation as any).fees?.baseFee?.amount || 0} {(feeCalculation as any).fees?.baseFee?.currency || 'USD'}
                                 </span>
                               </div>
-                              {feeCalculation.fees.percentageFee.amount > 0 && (
+                              {((feeCalculation as any).fees?.percentageFee?.amount || 0) > 0 && (
                                 <div className="flex justify-between items-center">
-                                  <span className="text-gray-600">{feeCalculation.fees.percentageFee.description}:</span>
+                                  <span className="text-gray-600">{(feeCalculation as any).fees?.percentageFee?.description || 'Frais pourcentage'}:</span>
                                   <span className="font-semibold text-red-600">
-                                    -{Number(feeCalculation.fees.percentageFee.amount || 0).toFixed(2)} {feeCalculation.fees.percentageFee.currency}
+                                    -{Number((feeCalculation as any).fees?.percentageFee?.amount || 0).toFixed(2)} {(feeCalculation as any).fees?.percentageFee?.currency || 'USD'}
                                   </span>
                                 </div>
                               )}
                               <div className="flex justify-between items-center border-t pt-2">
                                 <span className="font-medium text-gray-800">Total des frais:</span>
                                 <span className="font-bold text-red-600">
-                                  -{Number(feeCalculation.fees.total.amount || 0).toFixed(2)} {feeCalculation.fees.total.currency}
+                                  -{Number((feeCalculation as any).fees?.total?.amount || 0).toFixed(2)} {(feeCalculation as any).fees?.total?.currency || 'USD'}
                                 </span>
                               </div>
                               
@@ -664,19 +664,19 @@ export default function TransferPage() {
                                   <div className="flex justify-between items-center">
                                     <span className="text-xs text-green-700">Taux marché:</span>
                                     <span className="text-xs font-medium text-green-800">
-                                      1 {feeCalculation.senderCurrency} = {Number(feeCalculation.exchange.marketRate || 0).toFixed(4)} {feeCalculation.receiverCurrency}
+                                      1 {feeCalculation.senderCurrency} = {Number((feeCalculation as any).exchange?.marketRate || 0).toFixed(4)} {feeCalculation.receiverCurrency}
                                     </span>
                                   </div>
                                   <div className="flex justify-between items-center">
-                                    <span className="text-xs text-green-700">Taux appliqué (marge {feeCalculation.exchange.margin}%):</span>
+                                    <span className="text-xs text-green-700">Taux appliqué (marge {(feeCalculation as any).exchange?.margin || 0}%):</span>
                                     <span className="text-xs font-bold text-green-800">
-                                      1 {feeCalculation.senderCurrency} = {Number(feeCalculation.exchange.appliedRate || 0).toFixed(4)} {feeCalculation.receiverCurrency}
+                                      1 {feeCalculation.senderCurrency} = {Number((feeCalculation as any).exchange?.appliedRate || 0).toFixed(4)} {feeCalculation.receiverCurrency}
                                     </span>
                                   </div>
                                   <div className="flex justify-between items-center">
                                     <span className="text-xs text-green-700">Marge sur change:</span>
                                     <span className="text-xs font-medium text-green-600">
-                                      +{Number(feeCalculation.exchange.marginAmount || 0).toFixed(2)} {feeCalculation.senderCurrency}
+                                      +{Number((feeCalculation as any).exchange?.marginAmount || 0).toFixed(2)} {feeCalculation.senderCurrency}
                                     </span>
                                   </div>
                                 </div>
@@ -687,19 +687,19 @@ export default function TransferPage() {
                                 <div className="flex justify-between items-center">
                                   <span className="text-lg font-bold text-gray-900">Vous payez:</span>
                                   <span className="text-2xl font-bold text-primary-600">
-                                    {Number(feeCalculation.summary.totalPaid || 0).toFixed(2)} {feeCalculation.senderCurrency}
+                                    {Number((feeCalculation as any).summary?.totalPaid || 0).toFixed(2)} {feeCalculation.senderCurrency}
                                   </span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                   <span className="text-gray-600">Le destinataire reçoit:</span>
                                   <span className="text-lg font-bold text-green-600">
-                                    {Number(feeCalculation.summary.amountReceived || 0).toFixed(2)} {feeCalculation.receiverCurrency}
+                                    {Number((feeCalculation as any).summary?.amountReceived || 0).toFixed(2)} {feeCalculation.receiverCurrency}
                                   </span>
                                 </div>
                                 <div className="flex justify-between items-center text-xs">
                                   <span className="text-gray-500">Notre revenu total:</span>
                                   <span className="font-medium text-gray-600">
-                                    {Number(feeCalculation.summary.totalRevenue || 0).toFixed(2)} {feeCalculation.senderCurrency}
+                                    {Number((feeCalculation as any).summary?.totalRevenue || 0).toFixed(2)} {feeCalculation.senderCurrency}
                                   </span>
                                 </div>
                               </div>

@@ -51,7 +51,7 @@ export async function POST() {
     }
 
     // Recalculer les soldes totaux des wallets
-    const walletIds = [...new Set(cinetpaySubWallets.map(sw => sw.walletId))]
+    const walletIds = Array.from(new Set(cinetpaySubWallets.map(sw => sw.walletId)))
     
     for (const walletId of walletIds) {
       const wallet = await prisma.wallet.findUnique({

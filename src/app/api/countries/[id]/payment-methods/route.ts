@@ -7,7 +7,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { paymentMethodId, minAmount, maxAmount, fees } = await request.json()
+    const { paymentMethodId, minAmount, maxAmount, fees, bankId: reqBankId, accountNumber: reqAccountNumber, accountName: reqAccountName } = await request.json()
     const countryId = parseInt(params.id)
 
     const countryPaymentMethod = await prisma.countryPaymentMethod.upsert({
@@ -78,9 +78,9 @@ export async function POST(
     
     // Si c'est Bank Transfer, récupérer les infos bancaires
     if (countryPaymentMethod.paymentMethod.type === 'BANK_TRANSFER') {
-      bankId = request.bankId || null
-      accountNumber = request.accountNumber || null
-      accountName = request.accountName || null
+      bankId = reqBankId || null
+      accountNumber = reqAccountNumber || null
+      accountName = reqAccountName || null
     }
 
     await prisma.subWallet.upsert({

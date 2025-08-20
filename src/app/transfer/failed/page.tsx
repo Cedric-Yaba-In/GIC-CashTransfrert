@@ -130,7 +130,7 @@ export default function TransferFailedPage() {
     )
   }
 
-  const errorInfo = getErrorMessage(transaction?.status, reason)
+  const errorInfo = getErrorMessage((transaction as any)?.status, reason)
   const colorClasses = {
     red: 'from-red-50 to-red-100 text-red-600 bg-red-100',
     orange: 'from-orange-50 to-orange-100 text-orange-600 bg-orange-100',
@@ -138,9 +138,9 @@ export default function TransferFailedPage() {
   }
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${colorClasses[errorInfo.color]} flex items-center justify-center p-4`}>
+    <div className={`min-h-screen bg-gradient-to-br ${colorClasses[errorInfo.color as keyof typeof colorClasses]} flex items-center justify-center p-4`}>
       <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center">
-        <div className={`w-20 h-20 ${colorClasses[errorInfo.color]} rounded-full flex items-center justify-center mx-auto mb-6`}>
+        <div className={`w-20 h-20 ${colorClasses[errorInfo.color as keyof typeof colorClasses]} rounded-full flex items-center justify-center mx-auto mb-6`}>
           <span className="text-3xl">{errorInfo.icon}</span>
         </div>
         
@@ -162,7 +162,7 @@ export default function TransferFailedPage() {
         )}
 
         <div className="space-y-4">
-          {(transaction?.status === 'CANCELLED' || reason === 'cancelled') ? (
+          {((transaction as any)?.status === 'CANCELLED' || reason === 'cancelled') ? (
             <Link
               href="/transfer"
               className="w-full bg-gradient-to-r from-[#0B3371] to-[#1e4a7a] text-white py-4 rounded-2xl font-semibold flex items-center justify-center space-x-2 hover:shadow-lg transition-all"

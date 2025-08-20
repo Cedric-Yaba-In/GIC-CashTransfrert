@@ -8,7 +8,7 @@ export class EmailService {
     if (!this.transporter) {
       const emailConfig = await ConfigService.getEmailConfig()
       
-      this.transporter = nodemailer.createTransporter({
+      this.transporter = nodemailer.createTransport({
         host: emailConfig.host,
         port: emailConfig.port,
         secure: emailConfig.port === 465,
@@ -87,7 +87,7 @@ export class EmailService {
       return { success: true }
     } catch (error) {
       console.error('Error sending confirmation email:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: error instanceof Error ? error.message : String(error) }
     }
   }
 
@@ -157,7 +157,7 @@ export class EmailService {
       return { success: true }
     } catch (error) {
       console.error('Error sending receiver notification:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: error instanceof Error ? error.message : String(error) }
     }
   }
 }
