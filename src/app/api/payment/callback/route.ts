@@ -4,6 +4,8 @@ import { flutterwaveService } from '@/lib/flutterwave'
 import { NotificationService } from '@/lib/notifications'
 import { sanitizeForLog } from '@/lib/security'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)

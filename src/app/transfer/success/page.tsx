@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle, ArrowRight, Copy, Loader } from 'lucide-react'
 
-export default function TransferSuccessPage() {
+function TransferSuccessContent() {
   const searchParams = useSearchParams()
   const ref = searchParams.get('ref')
   const [copied, setCopied] = useState(false)
@@ -139,5 +139,20 @@ export default function TransferSuccessPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function TransferSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center">
+          <Loader className="w-12 h-12 text-green-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    }>
+      <TransferSuccessContent />
+    </Suspense>
   )
 }

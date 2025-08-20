@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { flutterwaveService } from '@/lib/flutterwave'
+
+export const dynamic = 'force-dynamic'
 import { sanitizeForLog } from '@/lib/security'
 
 export async function GET(request: NextRequest) {

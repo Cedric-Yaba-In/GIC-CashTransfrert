@@ -1,27 +1,30 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'prisma']
+    serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs']
   },
-  images: {
-    domains: [
-      'logos-world.net',
-      'www.afrilandfirstbank.com',
-      'www.banqueatlantique.net',
-      'www.cbccameroon.com',
-      'ecobank.com',
-      'av.sc.com',
-      'www.ubagroup.com'
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: '/api/:path*',
+      },
     ]
   },
-  webpack: (config) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      net: false,
-      tls: false,
-    }
-    return config
+  // Force dynamic rendering for API routes that use request.url
+  async headers() {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+        ],
+      },
+    ]
   }
 }
 

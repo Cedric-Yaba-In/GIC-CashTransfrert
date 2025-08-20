@@ -1,11 +1,11 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
 import { XCircle, ArrowLeft, RefreshCw, Loader } from 'lucide-react'
 
-export default function TransferFailedPage() {
+function TransferFailedContent() {
   const searchParams = useSearchParams()
   const reason = searchParams.get('reason')
   const ref = searchParams.get('ref')
@@ -208,5 +208,20 @@ export default function TransferFailedPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function TransferFailedPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center">
+          <Loader className="w-12 h-12 text-gray-400 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    }>
+      <TransferFailedContent />
+    </Suspense>
   )
 }
