@@ -32,7 +32,7 @@ export default function SupportPage() {
 
   const fetchTicket = async () => {
     try {
-      const response = await fetch(`/api/tickets?email=${email}&reference=${transactionReference}`)
+      const response = await fetch(`/api/tickets?email=${encodeURIComponent(email)}&reference=${encodeURIComponent(transactionReference)}`)
       
       if (response.ok) {
         const data = await response.json()
@@ -44,6 +44,8 @@ export default function SupportPage() {
       }
     } catch (error) {
       console.error('Failed to fetch ticket')
+      setTicket(null)
+      setMessages([])
     }
   }
 
@@ -60,7 +62,15 @@ export default function SupportPage() {
       
       if (response.ok) {
         toast.success('Message envoyé!')
-        setMessages([...messages, result.newMessage])
+        // Update messages with the new message
+        if (result.newMessage) {
+          setMessages(prev => [...prev, result.newMessage])
+        }
+        // Update ticket with latest data
+        if (result.ticket) {
+          setTicket(result.ticket)
+          setMessages(result.ticket.messages || [])
+        }
         reset({ message: '' })
       } else {
         toast.error(result.error || 'Erreur lors de l\'envoi')
@@ -218,28 +228,28 @@ export default function SupportPage() {
                             {messages.map((message, index) => (
                               <div
                                 key={index}
-                                className={`flex ${message.isAdmin ? 'justify-start' : 'justify-end'}`}
+                                className={`flex ${message?.isAdmin ? 'justify-start' : 'justify-end'}`}
                               >
                                 <div className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
-                                  message.isAdmin
+                                  message?.isAdmin
                                     ? 'bg-white text-gray-900 shadow-sm'
                                     : 'bg-primary-600 text-white'
                                 }`}>
                                   <div className="flex items-center space-x-2 mb-1">
-                                    {message.isAdmin ? (
+                                    {message?.isAdmin ? (
                                       <Bot className="h-4 w-4 text-primary-600" />
                                     ) : (
                                       <User className="h-4 w-4" />
                                     )}
                                     <span className="text-xs font-medium">
-                                      {message.isAdmin ? 'Support GIC' : 'Vous'}
+                                      {message?.isAdmin ? 'Support GIC' : 'Vous'}
                                     </span>
                                   </div>
-                                  <p className="text-sm">{message.message}</p>
+                                  <p className="text-sm">{message?.message}</p>
                                   <p className={`text-xs mt-2 ${
-                                    message.isAdmin ? 'text-gray-500' : 'text-primary-100'
+                                    message?.isAdmin ? 'text-gray-500' : 'text-primary-100'
                                   }`}>
-                                    {new Date(message.createdAt).toLocaleString('fr-FR')}
+                                    {message?.createdAt ? new Date(message.createdAt).toLocaleString('fr-FR') : ''}
                                   </p>
                                 </div>
                               </div>

@@ -98,24 +98,36 @@ export default function TransferPage() {
   const receiverPhone = watch('receiverPhone')
 
   useEffect(() => {
-    fetchRegions()
-    
-    // Restaurer les données si l'utilisateur revient de la page de paiement
-    const storedData = sessionStorage.getItem('transferData')
-    if (storedData) {
-      const data = JSON.parse(storedData)
-      setValue('senderName', data.senderName)
-      setValue('senderEmail', data.senderEmail)
-      setValue('senderPhone', data.senderPhone)
-      setValue('senderRegion', data.senderRegion)
-      setValue('senderCountryId', data.senderCountryId)
-      setValue('receiverName', data.receiverName)
-      setValue('receiverEmail', data.receiverEmail || '')
-      setValue('receiverPhone', data.receiverPhone)
-      setValue('receiverRegion', data.receiverRegion)
-      setValue('receiverCountryId', data.receiverCountryId)
-      setValue('amount', data.amount)
+    const initializeData = async () => {
+      await fetchRegions()
+      
+      // Restaurer les données si l'utilisateur revient de la page de paiement
+      const storedData = sessionStorage.getItem('transferData')
+      if (storedData) {
+        const data = JSON.parse(storedData)
+        setValue('senderName', data.senderName)
+        setValue('senderEmail', data.senderEmail)
+        setValue('senderPhone', data.senderPhone)
+        setValue('senderRegion', data.senderRegion)
+        setValue('senderCountryId', data.senderCountryId)
+        setValue('receiverName', data.receiverName)
+        setValue('receiverEmail', data.receiverEmail || '')
+        setValue('receiverPhone', data.receiverPhone)
+        setValue('receiverRegion', data.receiverRegion)
+        setValue('receiverCountryId', data.receiverCountryId)
+        setValue('amount', data.amount)
+        
+        // Charger les pays pour les régions sélectionnées
+        if (data.senderRegion) {
+          await fetchCountriesByRegion(data.senderRegion, 'sender')
+        }
+        if (data.receiverRegion) {
+          await fetchCountriesByRegion(data.receiverRegion, 'receiver')
+        }
+      }
     }
+    
+    initializeData()
   }, [])
 
   useEffect(() => {
@@ -153,9 +165,11 @@ export default function TransferPage() {
       const response = await fetch('/api/regions')
       const data = await response.json()
       setRegions(Array.isArray(data) ? data : [])
+      return true
     } catch (error) {
       toast.error('Erreur de chargement', 'Impossible de charger les régions')
       setRegions([])
+      return false
     }
   }
 
@@ -167,17 +181,18 @@ export default function TransferPage() {
       
       if (type === 'sender') {
         setSenderCountries(countries)
-        // Réinitialiser le pays sélectionné si il n'est plus dans la liste
+        // Ne pas réinitialiser si le pays existe dans la nouvelle liste
         if (senderCountryId && !countries.find(c => c.id === senderCountryId)) {
           setValue('senderCountryId', '')
         }
       } else {
         setReceiverCountries(countries)
-        // Réinitialiser le pays sélectionné si il n'est plus dans la liste
+        // Ne pas réinitialiser si le pays existe dans la nouvelle liste
         if (receiverCountryId && !countries.find(c => c.id === receiverCountryId)) {
           setValue('receiverCountryId', '')
         }
       }
+      return true
     } catch (error) {
       toast.error('Erreur de chargement', 'Impossible de charger les pays')
       if (type === 'sender') {
@@ -187,6 +202,7 @@ export default function TransferPage() {
         setReceiverCountries([])
         setValue('receiverCountryId', '')
       }
+      return false
     }
   }
 
@@ -200,6 +216,8 @@ export default function TransferPage() {
       setAvailablePaymentMethods([])
     }
   }
+
+
 
   const calculateFees = async () => {
     try {
@@ -549,6 +567,8 @@ export default function TransferPage() {
                   </div>
                 </div>
 
+
+
                 {/* Amount */}
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-8 border border-purple-100">
                   <div className="flex items-center mb-6">
@@ -700,23 +720,36 @@ export default function TransferPage() {
                   <button
                     type="button"
                     onClick={() => {
+                      setLoading(true)
                       // Vérifier que tous les champs requis sont remplis
                       const isFormValid = senderName && senderEmail && senderPhone && senderRegion && senderCountryId && 
                                          receiverName && receiverPhone && receiverRegion && receiverCountryId && amount
                       
                       if (isFormValid) {
+                        // Ajouter les noms des pays et régions
+                        const senderCountryData = senderCountries.find(c => c.id === senderCountryId)
+                        const receiverCountryData = receiverCountries.find(c => c.id === receiverCountryId)
+                        const senderRegionData = regions.find(r => r.code === senderRegion)
+                        const receiverRegionData = regions.find(r => r.code === receiverRegion)
+                        
                         // Rediriger vers la page de paiement avec les données
                         const transferData = {
                           senderName,
                           senderEmail,
                           senderPhone,
                           senderRegion,
+                          senderRegionName: senderRegionData?.name,
                           senderCountryId,
+                          senderCountryName: senderCountryData?.name,
+                          senderCountryCode: senderCountryData?.currencyCode,
                           receiverName,
                           receiverPhone: watch('receiverPhone'),
                           receiverEmail: watch('receiverEmail'),
                           receiverRegion,
+                          receiverRegionName: receiverRegionData?.name,
                           receiverCountryId,
+                          receiverCountryName: receiverCountryData?.name,
+                          receiverCountryCode: receiverCountryData?.currencyCode,
                           amount,
                           feeCalculation
                         }
@@ -725,13 +758,23 @@ export default function TransferPage() {
                         sessionStorage.setItem('transferData', JSON.stringify(transferData))
                         router.push('/transfer/payment')
                       }
+                      setLoading(false)
                     }}
-                    disabled={!senderName || !senderEmail || !senderPhone || !senderRegion || !senderCountryId || 
+                    disabled={loading || !senderName || !senderEmail || !senderPhone || !senderRegion || !senderCountryId || 
                              !receiverName || !receiverPhone || !receiverRegion || !receiverCountryId || !amount}
                     className="px-8 py-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center"
                   >
-                    Continuer le paiement
-                    <Send className="ml-2 h-5 w-5" />
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Préparation...
+                      </>
+                    ) : (
+                      <>
+                        Continuer le paiement
+                        <Send className="ml-2 h-5 w-5" />
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

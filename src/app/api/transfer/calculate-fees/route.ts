@@ -73,10 +73,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculer les frais
-    const calculatedPercentageFee = (amount * percentageFee) / 100
-    const totalFees = baseFee + calculatedPercentageFee
-    const amountAfterFees = amount - totalFees
-
+    const calculatedPercentageFee = (amount * percentageFee.toNumber()) / 100
+    const totalFees = baseFee.toNumber() + calculatedPercentageFee
+    
     // Récupérer le taux de change
     const exchangeRate = await ExchangeRateService.getExchangeRate(
       senderCountry.currencyCode,
@@ -84,9 +83,14 @@ export async function GET(request: NextRequest) {
     )
 
     // Appliquer la marge sur le taux de change
-    const adjustedRate = exchangeRate * (1 - exchangeRateMargin / 100)
-    const receivedAmount = amountAfterFees * adjustedRate
-    const exchangeMargin = amountAfterFees * (exchangeRate - adjustedRate)
+    const adjustedRate = exchangeRate * (1 - exchangeRateMargin.toNumber() / 100)
+    const exchangeMarginAmount = (exchangeRate - adjustedRate) * amount
+    
+    // Le montant total à payer inclut les frais
+    const totalPaid = amount + totalFees
+    
+    // Le montant reçu est basé sur le montant original converti au taux ajusté
+    const receivedAmount = amount * adjustedRate
 
     return NextResponse.json({
       amount,
@@ -117,17 +121,16 @@ export async function GET(request: NextRequest) {
         marketRate: exchangeRate,
         appliedRate: adjustedRate,
         margin: exchangeRateMargin,
-        marginAmount: exchangeMargin,
+        marginAmount: exchangeMarginAmount,
         description: `Taux ${senderCountry.currencyCode}/${receiverCountry.currencyCode}`
       },
 
       // Montants finaux
       summary: {
         amountSent: amount,
-        totalPaid: amount,
-        amountAfterFees: amountAfterFees,
+        totalPaid: totalPaid,
         amountReceived: receivedAmount,
-        totalRevenue: totalFees + exchangeMargin
+        totalRevenue: totalFees + exchangeMarginAmount
       },
 
       // Informations sur le taux appliqué

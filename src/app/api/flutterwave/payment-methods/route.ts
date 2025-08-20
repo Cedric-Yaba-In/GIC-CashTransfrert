@@ -7,6 +7,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const currency = searchParams.get('currency')
 
+    console.log('Flutterwave payment methods API called with currency:', currency)
+
     if (!currency) {
       return NextResponse.json(
         { error: 'Currency parameter is required' },
@@ -15,10 +17,11 @@ export async function GET(request: NextRequest) {
     }
 
     const paymentMethods = await flutterwaveService.getPaymentMethods(currency)
+    console.log('Flutterwave service returned:', paymentMethods)
     
     return NextResponse.json({
       status: 'success',
-      data: paymentMethods
+      data: paymentMethods || []
     })
   } catch (error) {
     console.error('Error fetching Flutterwave payment methods:', sanitizeForLog(error))

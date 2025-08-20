@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { sanitizeInput, validateEmail, validateAmount, sanitizeForLog, validateCSRFRequest } from '@/lib/security'
-import { createCSRFError } from '@/lib/csrf'
+import { sanitizeInput, validateEmail, validateAmount, sanitizeForLog } from '@/lib/security'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,11 +12,8 @@ function generateTransactionReference(): string {
 
 export async function POST(request: Request) {
   try {
-    if (!validateCSRFRequest(request as any)) {
-      return createCSRFError()
-    }
-
     const data = await request.json()
+    console.log('Creating transaction with data:', data)
     
     // Validate required fields
     if (!data.senderName || !data.senderEmail || !data.senderPhone ||
@@ -42,24 +38,31 @@ export async function POST(request: Request) {
 
     const reference = generateTransactionReference()
     
+    const transactionData = {
+      reference,
+      senderName: sanitizeInput(data.senderName),
+      senderEmail: sanitizeInput(data.senderEmail),
+      senderPhone: sanitizeInput(data.senderPhone),
+      senderCountryId: parseInt(data.senderCountryId),
+      receiverName: sanitizeInput(data.receiverName),
+      receiverEmail: data.receiverEmail ? sanitizeInput(data.receiverEmail) : null,
+      receiverPhone: sanitizeInput(data.receiverPhone),
+      receiverCountryId: parseInt(data.receiverCountryId),
+      amount: validAmount,
+      fees: validateAmount(data.fees) || 0,
+      totalAmount: validateAmount(data.totalAmount) || validAmount,
+      senderPaymentMethodId: parseInt(data.senderPaymentMethodId || data.paymentMethodId),
+      receiverPaymentMethodId: data.receiverPaymentMethodId ? parseInt(data.receiverPaymentMethodId) : null,
+      receiverSubMethod: data.receiverSubMethod || null,
+      adminNotes: data.adminNotes || null,
+      status: 'PENDING',
+    }
+    
+    console.log('Transaction data to save:', transactionData)
+    console.log('AdminNotes content:', data.adminNotes)
+    
     const transaction = await prisma.transaction.create({
-      data: {
-        reference,
-        senderName: sanitizeInput(data.senderName),
-        senderEmail: sanitizeInput(data.senderEmail),
-        senderPhone: sanitizeInput(data.senderPhone),
-        senderCountryId: parseInt(data.senderCountryId),
-        receiverName: sanitizeInput(data.receiverName),
-        receiverEmail: data.receiverEmail ? sanitizeInput(data.receiverEmail) : null,
-        receiverPhone: sanitizeInput(data.receiverPhone),
-        receiverCountryId: parseInt(data.receiverCountryId),
-        amount: validAmount,
-        fees: validateAmount(data.fees) || 0,
-        totalAmount: validateAmount(data.totalAmount) || validAmount,
-        senderPaymentMethodId: parseInt(data.senderPaymentMethodId || data.paymentMethodId),
-        receiverPaymentMethodId: data.receiverPaymentMethodId ? parseInt(data.receiverPaymentMethodId) : null,
-        status: 'PENDING',
-      },
+      data: transactionData,
       include: {
         senderCountry: true,
         receiverCountry: true,
@@ -67,6 +70,8 @@ export async function POST(request: Request) {
         receiverPaymentMethod: true,
       }
     })
+    
+    console.log('Transaction created successfully:', transaction.id)
 
     // Create support ticket
     await prisma.ticket.create({

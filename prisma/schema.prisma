@@ -17,6 +17,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  ticketMessages TicketMessage[]
+
   @@map("users")
 }
 
@@ -100,6 +102,9 @@ model Transaction {
   receiverPaymentMethodId Int?
   status                TransactionStatus @default(PENDING)
   paymentProof          String?           @db.VarChar(191)
+  flutterwaveRef        String?           @db.VarChar(191)
+  paidAt                DateTime?
+  receiverSubMethod     String?           @db.VarChar(50)
   adminNotes            String?           @db.Text
   sentAt                DateTime?
   receivedAt            DateTime?
@@ -270,21 +275,36 @@ enum TransactionStatus {
   REJECTED
   COMPLETED
   FAILED
+  CANCELLED
 }
 
 model Ticket {
   id            Int         @id @default(autoincrement())
   transactionId Int?
   subject       String      @db.VarChar(191)
-  message       String?     @db.Text
   status        TicketStatus @default(OPEN)
   priority      TicketPriority @default(NORMAL)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
   transaction   Transaction? @relation(fields: [transactionId], references: [id])
+  messages      TicketMessage[]
 
   @@map("tickets")
+}
+
+model TicketMessage {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  message   String   @db.Text
+  isAdmin   Boolean  @default(false)
+  adminId   Int?
+  createdAt DateTime @default(now())
+
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  admin     User?    @relation(fields: [adminId], references: [id])
+
+  @@map("ticket_messages")
 }
 
 enum ConfigType {

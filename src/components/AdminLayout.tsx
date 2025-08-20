@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { Bell, Menu, X, BarChart3, CreditCard, Wallet, Globe, Settings, LogOut, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Bell, Menu, X, BarChart3, CreditCard, Wallet, Globe, Settings, LogOut, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react'
 import NavigationLoader, { triggerNavigationLoading } from './NavigationLoader'
 
 interface AdminLayoutProps {
@@ -20,6 +20,7 @@ export default function AdminLayout({ children, user, onLogout }: AdminLayoutPro
   const getPageTitle = () => {
     if (pathname === '/admin') return 'Tableau de bord exécutif'
     if (pathname === '/admin/transactions') return 'Gestion des transactions'
+    if (pathname === '/admin/tickets') return 'Gestion du support'
     if (pathname === '/admin/wallets') return 'Gestion des portefeuilles'
     if (pathname === '/admin/countries') return 'Gestion des pays'
     if (pathname === '/admin/payment-methods') return 'Méthodes de paiement'
@@ -40,6 +41,7 @@ export default function AdminLayout({ children, user, onLogout }: AdminLayoutPro
   const menuItems = [
     { path: '/admin', icon: BarChart3, label: 'Dashboard', title: 'Tableau de bord' },
     { path: '/admin/transactions', icon: CreditCard, label: 'Transactions', title: 'Gestion des transactions' },
+    { path: '/admin/tickets', icon: MessageCircle, label: 'Support', title: 'Gestion du support' },
     { path: '/admin/wallets', icon: Wallet, label: 'Wallets', title: 'Gestion des portefeuilles' },
     { path: '/admin/payment-methods', icon: CreditCard, label: 'Méthodes', title: 'Méthodes de paiement' },
     { path: '/admin/countries', icon: Globe, label: 'Pays', title: 'Gestion des pays' },

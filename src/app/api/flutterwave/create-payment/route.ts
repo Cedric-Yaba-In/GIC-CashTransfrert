@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       tx_ref: transactionRef || flutterwaveService.generateTxRef(),
       amount: parseFloat(amount),
       currency: currency.toUpperCase(),
-      redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/transfer/payment/callback`,
+      redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payment/callback`,
       customer: {
         email: customer.email,
         phonenumber: customer.phone,
