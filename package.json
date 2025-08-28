@@ -13,10 +13,7 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "node scripts/reset-database.js",
-    "setup:new-structure": "scripts/setup-new-structure.bat",
-    "test:categories": "node test-payment-categories.js",
-    "test:init-db": "node test-init-db.js",
+
     "flutterwave:init": "tsx scripts/init-flutterwave-methods.ts",
     "flutterwave:sync-banks": "node -e \"console.log('Use the API endpoint /api/flutterwave/sync-banks to sync banks for a specific country')\"",
     "rates:init": "tsx scripts/init-transfer-rates.ts",

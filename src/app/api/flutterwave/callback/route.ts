@@ -104,11 +104,13 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/transfer/failed?ref=${transaction.reference}&reason=error`)
     }
     
-    // Pour les paiements réussis, vérifier avec Flutterwave
+    // Pour les paiements réussis, vérifier avec Flutterwave selon la doc officielle
     if (status === 'successful' && transaction_id) {
+      console.log('Verifying successful payment with Flutterwave API...')
       const verification = await flutterwaveService.verifyPayment(transaction_id)
       
       if (!verification) {
+        console.error('Flutterwave verification returned null')
         await prisma.transaction.update({
           where: { id: transaction.id },
           data: { 
@@ -117,12 +119,18 @@ export async function GET(request: NextRequest) {
               ...JSON.parse(transaction.adminNotes || '{}'),
               paymentStatus: status,
               flutterwaveTransactionId: transaction_id,
-              failureReason: 'Payment verification failed'
+              failureReason: 'Payment verification API call failed'
             })
           }
         })
         return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/transfer/failed?ref=${transaction.reference}&reason=verification_failed`)
       }
+      
+      console.log('Verification result:', {
+        status: verification.status,
+        amount: verification.amount,
+        expectedAmount: transaction.totalAmount.toNumber()
+      })
       
       if (verification.status === 'successful' && verification.amount >= transaction.totalAmount.toNumber()) {
       // Mettre à jour le statut de la transaction
@@ -173,7 +181,14 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/transfer/success?ref=${transaction.reference}`)
       } else {
-        // Vérification échouée
+        // Vérification échouée - statut ou montant incorrect
+        console.error('Verification failed:', {
+          verificationStatus: verification.status,
+          verificationAmount: verification.amount,
+          expectedStatus: 'successful',
+          expectedAmount: transaction.totalAmount.toNumber()
+        })
+        
         await prisma.transaction.update({
           where: { id: transaction.id },
           data: { 
@@ -182,7 +197,12 @@ export async function GET(request: NextRequest) {
               ...JSON.parse(transaction.adminNotes || '{}'),
               paymentStatus: status,
               flutterwaveTransactionId: transaction_id,
-              failureReason: 'Payment amount mismatch or verification failed'
+              verificationStatus: verification.status,
+              verificationAmount: verification.amount,
+              expectedAmount: transaction.totalAmount.toNumber(),
+              failureReason: verification.status !== 'successful' 
+                ? `Payment status is ${verification.status} instead of successful`
+                : `Amount mismatch: received ${verification.amount}, expected ${transaction.totalAmount.toNumber()}`
             })
           }
         })

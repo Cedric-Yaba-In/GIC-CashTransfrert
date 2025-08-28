@@ -305,16 +305,26 @@ class FlutterwaveService {
   async verifyPayment(transactionId: string): Promise<any> {
     try {
       await this.loadConfig()
+      console.log('Verifying Flutterwave payment:', transactionId)
+      
       const response = await fetch(`${this.config.baseUrl}/transactions/${transactionId}/verify`, {
+        method: 'GET',
         headers: await this.getHeaders()
       })
 
       const data = await response.json()
+      console.log('Flutterwave verification response:', sanitizeForLog(data))
       
-      if (data.status === 'success') {
+      if (data.status === 'success' && data.data) {
+        console.log('Payment verification successful:', {
+          status: data.data.status,
+          amount: data.data.amount,
+          currency: data.data.currency
+        })
         return data.data
       }
       
+      console.error('Payment verification failed:', sanitizeForLog(data))
       return null
     } catch (error) {
       console.error('Error verifying Flutterwave payment:', sanitizeForLog(error))
@@ -345,46 +355,64 @@ class FlutterwaveService {
     return `GIC_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
   }
 
-  async getBalance(currency: string): Promise<number> {
+  async getBalance(currency: string): Promise<number | null> {
     try {
       await this.loadConfig()
       
       if (!this.config.secretKey) {
         console.error('Flutterwave secret key not configured')
-        return 0
+        return null
       }
       
+      const generalResponseZ = await fetch(`${this.config.baseUrl}/balances`, {
+            method: 'GET',
+            headers: await this.getHeaders()
+          });
+      console.log("List avaliblieded ",await generalResponseZ.json())
       const response = await fetch(`${this.config.baseUrl}/balances/${currency}`, {
+        method: 'GET',
         headers: await this.getHeaders()
       })
 
       if (!response.ok) {
         if (response.status === 404) {
           // Try general balances endpoint
+          console.log('Trying general balances endpoint...')
           const generalResponse = await fetch(`${this.config.baseUrl}/balances`, {
+            method: 'GET',
             headers: await this.getHeaders()
           })
           
           if (generalResponse.ok) {
             const data = await generalResponse.json()
+            console.log('Flutterwave general balances response:', sanitizeForLog(data))
+            
             if (data.status === 'success' && Array.isArray(data.data)) {
               const balance = data.data.find((b: any) => b.currency === currency)
-              return balance ? parseFloat(balance.available_balance) || 0 : 0
+              const availableBalance = balance ? parseFloat(balance.available_balance) || 0 : 0
+              console.log(`Flutterwave balance for ${currency}:`, availableBalance)
+              return availableBalance
             }
           }
         }
-        return 0
+        console.error(`Flutterwave API error: ${response.status} ${response.statusText}`)
+        return null
       }
 
       const data = await response.json()
+      console.log('Flutterwave balance response:', sanitizeForLog(data))
+      
       if (data.status === 'success' && data.data) {
-        return parseFloat(data.data.available_balance) || 0
+        const availableBalance = parseFloat(data.data.available_balance) || 0
+        console.log(`Flutterwave balance for ${currency}:`, availableBalance)
+        return availableBalance
       }
       
-      return 0
+      console.error('Flutterwave balance API returned error:', sanitizeForLog(data))
+      return null
     } catch (error) {
       console.error('Error getting Flutterwave balance:', sanitizeForLog(error))
-      return 0
+      return null
     }
   }
 

@@ -338,33 +338,51 @@ class CinetPayService {
     }
   }
 
-  async getBalance(currency: string): Promise<number> {
+  async getBalance(currency: string): Promise<number | null> {
     try {
-      console.log('Fetching CinetPay balance for currency:', currency)
+      console.log('Fetching CinetPay balance from API for currency:', currency)
       
       // Étape 1: Obtenir le token d'authentification
       const token = await this.getAuthToken()
       
       if (!token) {
-        console.error('Unable to authenticate with CinetPay')
-        return 0
+        console.error('Unable to authenticate with CinetPay - check API credentials')
+        return null
       }
       
-      // Étape 2: Récupérer le solde avec le token
+
+      let subAccount = await fetch(`https://api-checkout.cinetpay.com/v2/account/balance`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body:JSON.stringify({
+        "apikey":this.config.apiKey,
+        "site_id":this.config.siteId
+      })
+    });
+    console.log("SubAccount", await subAccount.json())
+
+
+      // Étape 2: Récupérer le solde avec le token depuis l'API CinetPay
       const balanceUrl = `${this.config.clientBaseUrl}/transfer/check/balance?token=${encodeURIComponent(token)}&lang=fr`
       
+      // console.log('Calling CinetPay balance API:', balanceUrl)
       const response = await fetch(balanceUrl, {
         method: 'GET',
         headers: {
           'Accept': 'application/json'
         }
       })
+
+
       
       const data = await response.json()
+      console.log('CinetPay API response:', sanitizeForLog(data))
       
       if (data.code === 0 && data.data) {
         const availableBalance = parseFloat(data.data.available) || 0
-        console.log(`CinetPay balance retrieved:`, {
+        console.log(`CinetPay API balance retrieved for ${currency}:`, {
           total: data.data.amount,
           inUsing: data.data.inUsing,
           available: availableBalance
@@ -373,12 +391,12 @@ class CinetPayService {
         return availableBalance
       } else {
         console.error('CinetPay balance API error:', sanitizeForLog(data))
-        return 0
+        return null
       }
       
     } catch (error) {
-      console.error('Error getting CinetPay balance:', sanitizeForLog(error))
-      return 0
+      console.error('Error calling CinetPay balance API:', sanitizeForLog(error))
+      return null
     }
   }
 

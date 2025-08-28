@@ -48,13 +48,20 @@ export async function POST(
       }, { status: 404 })
     }
 
-    // Récupérer le solde depuis CinetPay
-    console.log(`Synchronizing CinetPay balance for ${country.name} (${country.currencyCode})`)
-    const newBalance = await cinetPayService.getBalance(country.currencyCode)
+    // Récupérer le solde réel depuis l'API CinetPay (pas local)
+    console.log(`Fetching real balance from CinetPay API for ${country.name} (${country.currencyCode})`)
+    const apiBalance = await cinetPayService.getBalance(country.currencyCode)
     
-    if (newBalance === 0) {
-      console.warn(`CinetPay returned 0 balance for ${country.name} - this might indicate an API issue`)
+    if (apiBalance === null) {
+      return NextResponse.json({
+        success: false,
+        error: 'Impossible de récupérer le solde depuis l\'API CinetPay',
+        details: 'Vérifiez la configuration CinetPay (API_KEY, API_PASSWORD) et la connectivité internet'
+      }, { status: 500 })
     }
+    
+    console.log(`CinetPay API returned real balance: ${apiBalance} ${country.currencyCode} (not local data)`)
+    const newBalance = apiBalance
     
     // Mettre à jour le solde du sous-wallet
     const oldBalance = cinetpaySubWallet.balance.toNumber()
