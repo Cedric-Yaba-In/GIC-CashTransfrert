@@ -78,7 +78,8 @@ export async function POST(request: Request) {
     // Créer le sous-wallet avec solde initial CinetPay
     let initialBalance = 0
     try {
-      initialBalance = await cinetPayService.getBalance(country.currencyCode)
+      const balance = await cinetPayService.getBalance(country.currencyCode)
+      initialBalance = balance ?? 0
     } catch (error) {
       console.log('CinetPay balance not available, using 0')
       initialBalance = 0

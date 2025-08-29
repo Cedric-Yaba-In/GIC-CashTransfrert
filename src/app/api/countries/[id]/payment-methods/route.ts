@@ -58,7 +58,8 @@ export async function POST(
     if (countryPaymentMethod.paymentMethod.type === 'FLUTTERWAVE') {
       const country = await prisma.country.findUnique({ where: { id: countryId } })
       if (country?.currencyCode) {
-        initialBalance = await flutterwaveService.getBalance(country.currencyCode)
+        const balance = await flutterwaveService.getBalance(country.currencyCode)
+        initialBalance = balance ?? 0
         isReadOnly = true // Flutterwave est en lecture seule
       }
     } else if (countryPaymentMethod.paymentMethod.type === 'CINETPAY') {
@@ -67,7 +68,8 @@ export async function POST(
       if (country?.currencyCode) {
         const { cinetPayService } = await import('@/lib/cinetpay')
         try {
-          initialBalance = await cinetPayService.getBalance(country.currencyCode)
+          const balance = await cinetPayService.getBalance(country.currencyCode)
+          initialBalance = balance ?? 0
         } catch (error) {
           console.log('CinetPay balance not available, using 0')
           initialBalance = 0

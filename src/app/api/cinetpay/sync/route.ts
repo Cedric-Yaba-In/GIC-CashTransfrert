@@ -36,15 +36,19 @@ export async function POST() {
         const country = subWallet.countryPaymentMethod.country
         const newBalance = await cinetPayService.getBalance(country.currencyCode)
         
-        // Mettre à jour le solde du sub-wallet
-        await prisma.subWallet.update({
-          where: { id: subWallet.id },
-          data: { balance: newBalance }
-        })
+        if (newBalance !== null) {
+          // Mettre à jour le solde du sub-wallet
+          await prisma.subWallet.update({
+            where: { id: subWallet.id },
+            data: { balance: newBalance }
+          })
 
-        console.log(`Updated ${country.name} (${country.currencyCode}): ${newBalance}`)
-        syncedCount++
-        totalBalance += newBalance
+          console.log(`Updated ${country.name} (${country.currencyCode}): ${newBalance}`)
+          syncedCount++
+          totalBalance += newBalance
+        } else {
+          console.warn(`Could not get balance for ${country.name} (${country.currencyCode})`)
+        }
       } catch (error) {
         console.error(`Error syncing balance for ${subWallet.countryPaymentMethod.country.name}:`, error)
       }

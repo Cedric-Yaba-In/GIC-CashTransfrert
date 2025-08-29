@@ -37,10 +37,10 @@ export async function POST() {
       if (country.currencyCode) {
         const newBalance = await flutterwaveService.getBalance(country.currencyCode)
         
-        if (newBalance !== subWallet.balance.toNumber()) {
+        if (newBalance !== null && newBalance !== subWallet.balance.toNumber()) {
           await prisma.subWallet.update({
             where: { id: subWallet.id },
-            data: { balance: newBalance }
+            data: { balance: newBalance as number }
           })
           updatedCount++
         }
