@@ -291,24 +291,24 @@ export default function TransferPage() {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Hero Section */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center px-4 py-2 bg-primary-50 text-primary-700 rounded-full text-sm font-medium mb-4">
-            <Globe className="h-4 w-4 mr-2" />
+        <div className="text-center mb-8 sm:mb-10 lg:mb-12">
+          <div className="inline-flex items-center px-3 sm:px-4 py-2 bg-primary-50 text-primary-700 rounded-full text-xs sm:text-sm font-medium mb-3 sm:mb-4">
+            <Globe className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
             Transfert international sécurisé
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 px-2">
             Nouveau transfert d'argent
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto px-4">
             Envoyez de l'argent rapidement et en toute sécurité vers plus de 50 pays dans le monde
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           {/* Progress Steps */}
-          <div className="bg-gradient-to-r from-primary-50 to-secondary-50 px-8 py-6">
+          <div className="bg-gradient-to-r from-primary-50 to-secondary-50 px-4 sm:px-6 lg:px-8 py-4 sm:py-5 lg:py-6">
             <TransferProgress
               currentStep={step}
               totalSteps={2}
@@ -329,21 +329,21 @@ export default function TransferPage() {
             />
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="p-8">
+          <form onSubmit={handleSubmit(onSubmit)} className="p-4 sm:p-6 lg:p-8">
             {step === 1 && (
               <div className="space-y-8">
                 {/* Sender Information */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-100">
-                  <div className="flex items-center mb-6">
-                    <div className="bg-blue-600 p-3 rounded-xl">
-                      <User className="h-6 w-6 text-white" />
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 border border-blue-100">
+                  <div className="flex items-center mb-4 sm:mb-6">
+                    <div className="bg-blue-600 p-2 sm:p-3 rounded-lg sm:rounded-xl">
+                      <User className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                     </div>
-                    <div className="ml-4">
-                      <h3 className="text-xl font-bold text-gray-900">Informations de l'expéditeur</h3>
-                      <p className="text-gray-600">Vos coordonnées pour l'envoi</p>
+                    <div className="ml-3 sm:ml-4">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-900">Informations de l'expéditeur</h3>
+                      <p className="text-sm sm:text-base text-gray-600 hidden sm:block">Vos coordonnées pour l'envoi</p>
                     </div>
                   </div>
-                  <div className="grid lg:grid-cols-2 gap-6">
+                  <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
                     <div className="space-y-2">
                       <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
                         <User className="h-4 w-4 mr-2 text-gray-500" />

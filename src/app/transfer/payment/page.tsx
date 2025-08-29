@@ -250,68 +250,68 @@ export default function PaymentPage() {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Hero Section */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 rounded-full text-sm font-medium mb-4">
-            <CreditCard className="h-4 w-4 mr-2" />
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 rounded-full text-xs sm:text-sm font-medium mb-3 sm:mb-4">
+            <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
             Paiement sécurisé
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2 px-2">
             Finaliser votre transfert
           </h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto px-4">
             Choisissez votre méthode de paiement et complétez les informations nécessaires
           </p>
         </div>
 
         {/* Récapitulatif amélioré */}
-        <div className="bg-gradient-to-r from-white to-blue-50/50 rounded-3xl shadow-xl border border-blue-100 p-8 mb-8 backdrop-blur-sm">
-          <div className="flex items-center mb-6">
-            <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-3 rounded-xl">
-              <CheckCircle className="h-6 w-6 text-white" />
+        <div className="bg-gradient-to-r from-white to-blue-50/50 rounded-2xl sm:rounded-3xl shadow-xl border border-blue-100 p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 backdrop-blur-sm">
+          <div className="flex items-center mb-4 sm:mb-6">
+            <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-2 sm:p-3 rounded-lg sm:rounded-xl">
+              <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
-            <div className="ml-4">
-              <h2 className="text-xl font-bold text-gray-900">Récapitulatif du transfert</h2>
-              <p className="text-gray-600">Vérifiez les détails avant de procéder au paiement</p>
+            <div className="ml-3 sm:ml-4">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Récapitulatif du transfert</h2>
+              <p className="text-sm sm:text-base text-gray-600 hidden sm:block">Vérifiez les détails avant de procéder au paiement</p>
             </div>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-6 mb-6">
-            <div className="bg-white/80 rounded-2xl p-6 border border-blue-100">
-              <h3 className="font-semibold text-blue-700 mb-3 flex items-center">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+            <div className="bg-white/80 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-blue-100">
+              <h3 className="font-semibold text-blue-700 mb-3 flex items-center text-sm sm:text-base">
                 <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
                 Expéditeur
               </h3>
-              <div className="space-y-2">
-                <p className="text-gray-800 font-medium">{transferData.senderName}</p>
-                <p className="text-gray-600 text-sm">{transferData.senderEmail}</p>
-                <p className="text-gray-600 text-sm">{transferData.senderPhone}</p>
-                <p className="text-gray-600 text-sm">{transferData.senderCountryName} ({transferData.senderCountryCode})</p>
-                <p className="text-gray-500 text-xs">{transferData.senderRegionName}</p>
+              <div className="space-y-1 sm:space-y-2">
+                <p className="text-gray-800 font-medium text-sm sm:text-base truncate">{transferData.senderName}</p>
+                <p className="text-gray-600 text-xs sm:text-sm truncate">{transferData.senderEmail}</p>
+                <p className="text-gray-600 text-xs sm:text-sm">{transferData.senderPhone}</p>
+                <p className="text-gray-600 text-xs sm:text-sm">{transferData.senderCountryName} ({transferData.senderCountryCode})</p>
+                <p className="text-gray-500 text-xs hidden sm:block">{transferData.senderRegionName}</p>
               </div>
             </div>
             
-            <div className="bg-white/80 rounded-2xl p-6 border border-green-100">
-              <h3 className="font-semibold text-green-700 mb-3 flex items-center">
+            <div className="bg-white/80 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-green-100">
+              <h3 className="font-semibold text-green-700 mb-3 flex items-center text-sm sm:text-base">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
                 Destinataire
               </h3>
-              <div className="space-y-2">
-                <p className="text-gray-800 font-medium">{transferData.receiverName}</p>
-                <p className="text-gray-600 text-sm">{transferData.receiverEmail || 'Non renseigné'}</p>
-                <p className="text-gray-600 text-sm">{transferData.receiverPhone}</p>
-                <p className="text-gray-600 text-sm">{transferData.receiverCountryName} ({transferData.receiverCountryCode})</p>
-                <p className="text-gray-500 text-xs">{transferData.receiverRegionName}</p>
+              <div className="space-y-1 sm:space-y-2">
+                <p className="text-gray-800 font-medium text-sm sm:text-base truncate">{transferData.receiverName}</p>
+                <p className="text-gray-600 text-xs sm:text-sm truncate">{transferData.receiverEmail || 'Non renseigné'}</p>
+                <p className="text-gray-600 text-xs sm:text-sm">{transferData.receiverPhone}</p>
+                <p className="text-gray-600 text-xs sm:text-sm">{transferData.receiverCountryName} ({transferData.receiverCountryCode})</p>
+                <p className="text-gray-500 text-xs hidden sm:block">{transferData.receiverRegionName}</p>
               </div>
             </div>
             
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-200">
-              <h3 className="font-semibold text-purple-700 mb-3 flex items-center">
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-purple-200 sm:col-span-2 lg:col-span-1">
+              <h3 className="font-semibold text-purple-700 mb-3 flex items-center text-sm sm:text-base">
                 <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
                 Montants
               </h3>
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 text-sm">Montant à envoyer:</span>
                   <span className="font-semibold text-gray-800">{transferData.amount} {transferData.feeCalculation?.senderCurrency || transferData.senderCountryCode}</span>
@@ -346,23 +346,23 @@ export default function PaymentPage() {
           </div>
         </div>
 
-        <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-indigo-100 overflow-hidden">
-          <form onSubmit={handleSubmit(onSubmit)} className="p-8">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl border border-indigo-100 overflow-hidden">
+          <form onSubmit={handleSubmit(onSubmit)} className="p-4 sm:p-6 lg:p-8">
             {step === 1 && (
-              <div className="space-y-8 p-8">
-                <div className="text-center mb-10">
-                  <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 rounded-full text-sm font-medium mb-4">
-                    <CreditCard className="h-4 w-4 mr-2" />
+              <div className="space-y-6 sm:space-y-8">
+                <div className="text-center mb-6 sm:mb-8 lg:mb-10">
+                  <div className="inline-flex items-center px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 rounded-full text-xs sm:text-sm font-medium mb-3 sm:mb-4">
+                    <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     Étape 1 sur 3
                   </div>
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2 sm:mb-3 px-2">
                     Choisir la méthode de paiement
                   </h1>
-                  <p className="text-gray-600 text-lg">Sélectionnez comment vous souhaitez payer</p>
+                  <p className="text-sm sm:text-base lg:text-lg text-gray-600 px-4">Sélectionnez comment vous souhaitez payer</p>
                 </div>
 
                 {availablePaymentMethods.length > 0 ? (
-                  <div className="grid gap-6 max-w-4xl mx-auto">
+                  <div className="grid gap-4 sm:gap-6 max-w-4xl mx-auto">
                     {availablePaymentMethods.map((method, index) => {
                       const gradients = [
                         'from-blue-500 to-indigo-600',
@@ -383,7 +383,7 @@ export default function PaymentPage() {
                       return (
                         <div
                           key={method.paymentMethodId}
-                          className={`relative border-2 rounded-2xl p-8 cursor-pointer transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl ${
+                          className={`relative border-2 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 cursor-pointer transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl ${
                             paymentMethodId === method.paymentMethodId
                               ? `border-blue-400 bg-gradient-to-r ${bgColors[index % 3]} shadow-lg scale-[1.02]`
                               : `${borderColors[index % 3]} bg-white hover:shadow-lg`
@@ -396,36 +396,36 @@ export default function PaymentPage() {
                             </div>
                           )}
                           
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <div className={`bg-gradient-to-r ${gradients[index % 3]} p-4 rounded-2xl mr-6 shadow-lg`}>
-                                <CreditCard className="h-8 w-8 text-white" />
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center mb-3 sm:mb-0">
+                              <div className={`bg-gradient-to-r ${gradients[index % 3]} p-3 sm:p-4 rounded-xl sm:rounded-2xl mr-3 sm:mr-4 lg:mr-6 shadow-lg flex-shrink-0`}>
+                                <CreditCard className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-white" />
                               </div>
-                              <div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-2">{method.paymentMethodName}</h3>
-                                <div className="flex items-center space-x-4">
+                              <div className="min-w-0 flex-1">
+                                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-1 sm:mb-2 truncate">{method.paymentMethodName}</h3>
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-1 sm:space-y-0">
                                   <div className="flex items-center">
-                                    <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                                    <span className="text-sm font-medium text-green-700">Disponible</span>
+                                    <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full mr-1 sm:mr-2"></div>
+                                    <span className="text-xs sm:text-sm font-medium text-green-700">Disponible</span>
                                   </div>
-                                  <div className="text-sm text-gray-600">
+                                  <div className="text-xs sm:text-sm text-gray-600">
                                     Solde: <span className="font-semibold text-gray-800">{method.balance.toFixed(2)} {transferData.feeCalculation?.senderCurrency || 'USD'}</span>
                                   </div>
                                 </div>
-                                <div className="mt-2 text-xs text-gray-500">
+                                <div className="mt-1 sm:mt-2 text-xs text-gray-500">
                                   Limites: {method.minAmount} - {method.maxAmount || '∞'} {transferData.feeCalculation?.senderCurrency || 'USD'}
                                 </div>
                               </div>
                             </div>
                             
-                            <div className={`w-6 h-6 rounded-full border-3 transition-all duration-200 ${
+                            <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 sm:border-3 transition-all duration-200 flex-shrink-0 ${
                               paymentMethodId === method.paymentMethodId
                                 ? 'border-blue-500 bg-blue-500'
                                 : 'border-gray-300'
                             }`}>
                               {paymentMethodId === method.paymentMethodId && (
                                 <div className="w-full h-full flex items-center justify-center">
-                                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full"></div>
                                 </div>
                               )}
                             </div>
@@ -439,16 +439,16 @@ export default function PaymentPage() {
                     />
                   </div>
                 ) : (
-                  <div className="space-y-8">
-                    <div className="text-center py-16 bg-gradient-to-r from-gray-50 to-gray-100 rounded-3xl border-2 border-dashed border-gray-300">
-                      <div className="bg-gradient-to-r from-red-100 to-orange-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <AlertCircle className="h-10 w-10 text-red-500" />
+                  <div className="space-y-6 sm:space-y-8">
+                    <div className="text-center py-8 sm:py-12 lg:py-16 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl sm:rounded-3xl border-2 border-dashed border-gray-300">
+                      <div className="bg-gradient-to-r from-red-100 to-orange-100 w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                        <AlertCircle className="h-8 w-8 sm:h-10 sm:w-10 text-red-500" />
                       </div>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-3">Fonds insuffisants</h3>
-                      <p className="text-gray-600 text-lg max-w-md mx-auto">Le pays de destination n'a pas suffisamment de fonds pour ce montant</p>
+                      <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3 px-4">Fonds insuffisants</h3>
+                      <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-md mx-auto px-4">Le pays de destination n'a pas suffisamment de fonds pour ce montant</p>
                       <button
                         onClick={() => router.push('/transfer')}
-                        className="mt-6 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:from-blue-600 hover:to-indigo-600 transition-all duration-200"
+                        className="mt-4 sm:mt-6 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg sm:rounded-xl hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 text-sm sm:text-base"
                       >
                         Modifier le montant
                       </button>
@@ -475,12 +475,12 @@ export default function PaymentPage() {
                 )}
 
                 {availablePaymentMethods.length > 0 && (
-                  <div className="flex justify-center pt-8">
+                  <div className="flex justify-center pt-6 sm:pt-8">
                     <button
                       type="button"
                       onClick={() => setStep(2)}
                       disabled={!paymentMethodId}
-                      className="px-12 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-lg"
+                      className="w-full sm:w-auto px-8 sm:px-12 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl sm:rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-base sm:text-lg"
                     >
                       Continuer →
                     </button>
@@ -490,16 +490,16 @@ export default function PaymentPage() {
             )}
 
             {step === 2 && selectedPaymentMethod && (
-              <div className="space-y-8 p-8">
-                <div className="text-center mb-10">
-                  <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 rounded-full text-sm font-medium mb-4">
-                    <CreditCard className="h-4 w-4 mr-2" />
+              <div className="space-y-6 sm:space-y-8">
+                <div className="text-center mb-6 sm:mb-8 lg:mb-10">
+                  <div className="inline-flex items-center px-3 sm:px-4 py-2 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 rounded-full text-xs sm:text-sm font-medium mb-3 sm:mb-4">
+                    <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     Étape 2 sur 3
                   </div>
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-3">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2 sm:mb-3 px-2">
                     Méthode de réception
                   </h1>
-                  <p className="text-gray-600 text-lg">Comment le destinataire recevra-t-il l'argent ?</p>
+                  <p className="text-sm sm:text-base lg:text-lg text-gray-600 px-4">Comment le destinataire recevra-t-il l'argent ?</p>
                 </div>
 
                 {/* Sélection de la méthode de réception */}
@@ -586,11 +586,11 @@ export default function PaymentPage() {
                   )}
                 </div>
 
-                <div className="flex justify-between items-center pt-8">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6 sm:pt-8">
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    className="px-8 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium"
+                    className="w-full sm:w-auto px-6 sm:px-8 py-3 border-2 border-gray-300 text-gray-700 rounded-lg sm:rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium"
                   >
                     ← Retour
                   </button>
@@ -598,7 +598,7 @@ export default function PaymentPage() {
                     type="button"
                     onClick={() => setStep(3)}
                     disabled={!receiverPaymentMethodId}
-                    className="px-12 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-lg"
+                    className="w-full sm:w-auto px-8 sm:px-12 py-3 sm:py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-xl sm:rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-base sm:text-lg"
                   >
                     Continuer →
                   </button>
@@ -607,23 +607,23 @@ export default function PaymentPage() {
             )}
 
             {step === 3 && selectedPaymentMethod && (
-              <div className="space-y-8 p-8">
-                <div className="text-center mb-10">
-                  <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-sm font-medium mb-4">
-                    <Send className="h-4 w-4 mr-2" />
+              <div className="space-y-6 sm:space-y-8">
+                <div className="text-center mb-6 sm:mb-8 lg:mb-10">
+                  <div className="inline-flex items-center px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-xs sm:text-sm font-medium mb-3 sm:mb-4">
+                    <Send className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     Étape 3 sur 3
                   </div>
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2 sm:mb-3 px-2">
                     Informations de paiement
                   </h1>
-                  <p className="text-gray-600 text-lg">Renseignez les coordonnées pour l'envoi et la réception</p>
+                  <p className="text-sm sm:text-base lg:text-lg text-gray-600 px-4">Renseignez les coordonnées pour l'envoi et la réception</p>
                 </div>
 
                 {selectedReceiverMethod?.paymentMethodType === 'MOBILE_MONEY' && (
-                  <div className="bg-green-50 rounded-xl p-6">
-                    <h3 className="font-semibold text-green-900 mb-4">Réception via Mobile Money</h3>
+                  <div className="bg-green-50 rounded-lg sm:rounded-xl p-4 sm:p-6">
+                    <h3 className="font-semibold text-green-900 mb-3 sm:mb-4 text-sm sm:text-base">Réception via Mobile Money</h3>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                         Numéro Mobile Money du destinataire *
                       </label>
                       <input
@@ -631,7 +631,7 @@ export default function PaymentPage() {
                         type="tel"
                         placeholder="+225 01 23 45 67 89"
                         defaultValue={transferData.receiverPhone}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base"
                       />
                     </div>
                   </div>
@@ -891,38 +891,38 @@ export default function PaymentPage() {
                   )}
                 </div>
 
-                <div className="flex justify-between items-center pt-8">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6 sm:pt-8">
                   <button
                     type="button"
                     onClick={() => setStep(2)}
-                    className="px-8 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium"
+                    className="w-full sm:w-auto px-6 sm:px-8 py-3 border-2 border-gray-300 text-gray-700 rounded-lg sm:rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium"
                   >
                     ← Retour
                   </button>
                   <button
                     type="submit"
                     disabled={loading || (selectedReceiverMethod?.paymentMethodType === 'FLUTTERWAVE' && !selectedFlutterwaveOption)}
-                    className="px-12 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-lg flex items-center"
+                    className="w-full sm:w-auto px-8 sm:px-12 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold rounded-xl sm:rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-base sm:text-lg flex items-center justify-center"
                   >
                     {loading ? (
                       <>
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
+                        <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-white mr-2 sm:mr-3"></div>
                         Traitement...
                       </>
                     ) : selectedPaymentMethod?.paymentMethodType === 'FLUTTERWAVE' ? (
                       <>
                         Payer avec Flutterwave
-                        <CreditCard className="ml-3 h-6 w-6" />
+                        <CreditCard className="ml-2 sm:ml-3 h-5 w-5 sm:h-6 sm:w-6" />
                       </>
                     ) : selectedPaymentMethod?.paymentMethodType === 'CINETPAY' ? (
                       <>
                         Payer avec CinetPay
-                        <CreditCard className="ml-3 h-6 w-6" />
+                        <CreditCard className="ml-2 sm:ml-3 h-5 w-5 sm:h-6 sm:w-6" />
                       </>
                     ) : (
                       <>
                         Lancer le paiement
-                        <Send className="ml-3 h-6 w-6" />
+                        <Send className="ml-2 sm:ml-3 h-5 w-5 sm:h-6 sm:w-6" />
                       </>
                     )}
                   </button>

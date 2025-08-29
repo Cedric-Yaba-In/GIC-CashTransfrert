@@ -17,13 +17,13 @@ export default function TransferProgress({ currentStep, totalSteps, steps }: Tra
   const getStepIcon = (step: typeof steps[0]) => {
     switch (step.status) {
       case 'completed':
-        return <CheckCircle className="h-5 w-5 text-white" />
+        return <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
       case 'current':
-        return <Clock className="h-5 w-5 text-white animate-pulse" />
+        return <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-white animate-pulse" />
       case 'error':
-        return <AlertCircle className="h-5 w-5 text-white" />
+        return <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
       default:
-        return <span className="text-white font-semibold">{step.id}</span>
+        return <span className="text-white font-semibold text-xs sm:text-sm">{step.id}</span>
     }
   }
 
@@ -49,41 +49,68 @@ export default function TransferProgress({ currentStep, totalSteps, steps }: Tra
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between mb-8">
+      {/* Version desktop */}
+      <div className="hidden sm:flex items-center justify-between mb-6 sm:mb-8">
         {steps.map((step, index) => (
           <div key={step.id} className="flex items-center flex-1">
             <div className="flex flex-col items-center">
-              <div className={`relative w-10 h-10 rounded-full border-2 flex items-center justify-center font-semibold transition-all duration-300 ${getStepColor(step)}`}>
+              <div className={`relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 flex items-center justify-center font-semibold transition-all duration-300 ${getStepColor(step)}`}>
                 {getStepIcon(step)}
               </div>
-              <div className="mt-3 text-center">
-                <p className={`text-sm font-medium ${step.status === 'current' ? 'text-blue-600' : step.status === 'completed' ? 'text-green-600' : 'text-gray-500'}`}>
+              <div className="mt-2 sm:mt-3 text-center">
+                <p className={`text-xs sm:text-sm font-medium ${step.status === 'current' ? 'text-blue-600' : step.status === 'completed' ? 'text-green-600' : 'text-gray-500'}`}>
                   {step.title}
                 </p>
-                <p className="text-xs text-gray-400 mt-1 max-w-24">
+                <p className="text-xs text-gray-400 mt-1 max-w-20 sm:max-w-24 hidden sm:block">
                   {step.description}
                 </p>
               </div>
             </div>
             
             {index < steps.length - 1 && (
-              <div className="flex-1 mx-4">
-                <div className={`h-1 rounded-full transition-all duration-500 ${getConnectorColor(index)}`}></div>
+              <div className="flex-1 mx-2 sm:mx-4">
+                <div className={`h-0.5 sm:h-1 rounded-full transition-all duration-500 ${getConnectorColor(index)}`}></div>
               </div>
             )}
           </div>
         ))}
       </div>
       
-      <div className="bg-gray-100 rounded-full h-2 mb-4">
+      {/* Version mobile */}
+      <div className="sm:hidden mb-6">
+        <div className="flex items-center justify-center space-x-4 mb-4">
+          {steps.map((step, index) => (
+            <div key={step.id} className="flex items-center">
+              <div className={`relative w-8 h-8 rounded-full border-2 flex items-center justify-center font-semibold transition-all duration-300 ${getStepColor(step)}`}>
+                <span className="text-xs text-white font-bold">{step.id}</span>
+              </div>
+              {index < steps.length - 1 && (
+                <div className="w-8 mx-2">
+                  <div className={`h-0.5 rounded-full transition-all duration-500 ${getConnectorColor(index)}`}></div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-medium text-gray-900">
+            {steps.find(s => s.status === 'current')?.title}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {steps.find(s => s.status === 'current')?.description}
+          </p>
+        </div>
+      </div>
+      
+      <div className="bg-gray-100 rounded-full h-1.5 sm:h-2 mb-3 sm:mb-4">
         <div 
-          className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500"
+          className="bg-gradient-to-r from-blue-500 to-green-500 h-1.5 sm:h-2 rounded-full transition-all duration-500"
           style={{ width: `${(currentStep / totalSteps) * 100}%` }}
         ></div>
       </div>
       
       <div className="text-center">
-        <p className="text-sm text-gray-600">
+        <p className="text-xs sm:text-sm text-gray-600">
           Étape {currentStep} sur {totalSteps}
         </p>
       </div>
