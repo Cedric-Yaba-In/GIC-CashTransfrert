@@ -23,7 +23,6 @@ export default function AdminLayout({ children, user, onLogout }: AdminLayoutPro
     if (pathname === '/admin/tickets') return 'Gestion du support'
     if (pathname === '/admin/wallets') return 'Gestion des portefeuilles'
     if (pathname === '/admin/countries') return 'Gestion des pays'
-    if (pathname === '/admin/payment-methods') return 'Méthodes de paiement'
     if (pathname === '/admin/transfer-rates') return 'Taux de transfert'
     if (pathname === '/admin/config') return 'Configuration système'
     return 'Administration'
@@ -43,7 +42,6 @@ export default function AdminLayout({ children, user, onLogout }: AdminLayoutPro
     { path: '/admin/transactions', icon: CreditCard, label: 'Transactions', title: 'Gestion des transactions' },
     { path: '/admin/tickets', icon: MessageCircle, label: 'Support', title: 'Gestion du support' },
     { path: '/admin/wallets', icon: Wallet, label: 'Wallets', title: 'Gestion des portefeuilles' },
-    { path: '/admin/payment-methods', icon: CreditCard, label: 'Méthodes', title: 'Méthodes de paiement' },
     { path: '/admin/countries', icon: Globe, label: 'Pays', title: 'Gestion des pays' },
     { path: '/admin/transfer-rates', icon: Settings, label: 'Taux', title: 'Taux de transfert' },
     { path: '/admin/config', icon: Settings, label: 'Configuration', title: 'Configuration système' },

@@ -118,11 +118,7 @@ export async function seedDatabase() {
       { key: 'TWILIO_AUTH_TOKEN', value: '', category: 'sms', type: 'PASSWORD', label: 'Twilio Auth Token', required: false, encrypted: true },
       { key: 'TWILIO_PHONE_NUMBER', value: '', category: 'sms', type: 'STRING', label: 'Numéro Twilio', required: false },
       
-      // Payment Configuration
-      { key: 'FLUTTERWAVE_PUBLIC_KEY', value: '', category: 'payment', type: 'STRING', label: 'Flutterwave Public Key', required: false },
-      { key: 'FLUTTERWAVE_SECRET_KEY', value: '', category: 'payment', type: 'PASSWORD', label: 'Flutterwave Secret Key', required: false, encrypted: true },
-      { key: 'FLUTTERWAVE_WEBHOOK_HASH', value: '', category: 'payment', type: 'PASSWORD', label: 'Flutterwave Webhook Hash', required: false, encrypted: true },
-      { key: 'FLUTTERWAVE_ENCRYPTION_KEY', value: '', category: 'payment', type: 'PASSWORD', label: 'Flutterwave Encryption Key', required: false, encrypted: true },
+
       
       // CinetPay Configuration
       { key: 'CINETPAY_API_KEY', value: '', category: 'cinetpay', type: 'PASSWORD', label: 'Clé API CinetPay', required: false, encrypted: true },

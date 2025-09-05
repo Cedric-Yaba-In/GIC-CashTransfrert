@@ -46,15 +46,7 @@ const categoryConfig = {
     borderColor: 'border-slate-200',
     testable: true
   },
-  payment: {
-    icon: CreditCard,
-    title: 'Flutterwave',
-    description: 'Configuration de la passerelle Flutterwave',
-    bgColor: 'from-blue-600 to-blue-700',
-    lightBg: 'bg-blue-50',
-    borderColor: 'border-blue-200',
-    testable: true
-  },
+
   cinetpay: {
     icon: CreditCard,
     title: 'CinetPay',
@@ -314,7 +306,7 @@ export default function ConfigPage() {
         <div className="grid lg:grid-cols-2 gap-8">
           {Object.keys(groupedConfigs).length > 0 ? (
             // Ordre des sections : app, business, payment, cinetpay, sms, email, api, security
-            ['app', 'business', 'payment', 'cinetpay', 'sms', 'email', 'api', 'security']
+            ['app', 'business', 'cinetpay', 'sms', 'email', 'api', 'security']
               .filter(category => groupedConfigs[category])
               .map((category) => {
               const categoryConfigs = groupedConfigs[category]

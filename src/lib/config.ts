@@ -187,14 +187,7 @@ export class ConfigService {
     }
   }
 
-  static async getFlutterwaveConfig(): Promise<any> {
-    return {
-      publicKey: await this.get('FLUTTERWAVE_PUBLIC_KEY'),
-      secretKey: await this.get('FLUTTERWAVE_SECRET_KEY'),
-      webhookHash: await this.get('FLUTTERWAVE_WEBHOOK_HASH'),
-      encryptionKey: await this.get('FLUTTERWAVE_ENCRYPTION_KEY')
-    }
-  }
+
 
   static async getCinetPayConfig(): Promise<any> {
     return {

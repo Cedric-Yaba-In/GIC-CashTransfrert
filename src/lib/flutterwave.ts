@@ -81,47 +81,47 @@ interface FlutterwaveTransferResponse {
 }
 
 class FlutterwaveService {
-  private config: FlutterwaveConfig
-  private configLoaded = false
+  private baseUrl = 'https://api.flutterwave.com/v3'
+  private countryConfigs = new Map<number, FlutterwaveConfig>()
 
-  constructor() {
-    this.config = {
-      publicKey: '',
-      secretKey: '',
-      baseUrl: 'https://api.flutterwave.com/v3'
+  constructor() {}
+
+  private async loadCountryConfig(countryId: number): Promise<FlutterwaveConfig | null> {
+    if (this.countryConfigs.has(countryId)) {
+      return this.countryConfigs.get(countryId)!
     }
-  }
 
-  private async loadConfig() {
-    if (!this.configLoaded) {
-      try {
-        const flutterwaveConfig = await ConfigService.getFlutterwaveConfig()
-        this.config.publicKey = flutterwaveConfig.publicKey || process.env.FLUTTERWAVE_PUBLIC_KEY || ''
-        this.config.secretKey = flutterwaveConfig.secretKey || process.env.FLUTTERWAVE_SECRET_KEY || ''
-        this.configLoaded = true
-        console.log('Flutterwave config loaded:', {
-          hasPublicKey: !!this.config.publicKey,
-          hasSecretKey: !!this.config.secretKey
-        })
-      } catch (error) {
-        console.error('Error loading Flutterwave config:', error)
-        // Fallback to env variables
-        this.config.publicKey = process.env.FLUTTERWAVE_PUBLIC_KEY || ''
-        this.config.secretKey = process.env.FLUTTERWAVE_SECRET_KEY || ''
-        this.configLoaded = true
+    try {
+      const countryPaymentMethod = await prisma.countryPaymentMethod.findFirst({
+        where: {
+          countryId,
+          paymentMethod: { type: 'FLUTTERWAVE' },
+          active: true
+        }
+      })
+
+      if (!countryPaymentMethod?.apiConfig) {
+        return null
       }
+
+      const config = JSON.parse(countryPaymentMethod.apiConfig) as FlutterwaveConfig
+      this.countryConfigs.set(countryId, config)
+      return config
+    } catch (error) {
+      console.error(`Error loading Flutterwave config for country ${countryId}:`, error)
+      return null
     }
   }
 
-  private async getHeaders() {
-    await this.loadConfig()
+  private async getHeaders(countryId: number) {
+    const config = await this.loadCountryConfig(countryId)
     
-    if (!this.config.secretKey) {
-      throw new Error('Flutterwave secret key not configured')
+    if (!config?.secretKey) {
+      throw new Error(`Flutterwave not configured for country ${countryId}`)
     }
     
     return {
-      'Authorization': `Bearer ${this.config.secretKey}`,
+      'Authorization': `Bearer ${config.secretKey}`,
       'Content-Type': 'application/json'
     }
   }
@@ -191,17 +191,12 @@ class FlutterwaveService {
     return methods
   }
 
-  async getBanks(country: string): Promise<any[]> {
+  async getBanks(countryId: number, countryCode: string): Promise<any[]> {
     try {
-      await this.loadConfig()
+      const headers = await this.getHeaders(countryId)
       
-      if (!this.config.secretKey) {
-        console.error('Flutterwave secret key not configured')
-        return []
-      }
-      
-      const response = await fetch(`${this.config.baseUrl}/banks/${country}`, {
-        headers: await this.getHeaders()
+      const response = await fetch(`${this.baseUrl}/banks/${countryCode}`, {
+        headers
       })
 
       if (!response.ok) {
@@ -222,12 +217,12 @@ class FlutterwaveService {
     }
   }
 
-  async createPayment(paymentData: FlutterwavePaymentData): Promise<FlutterwaveResponse | null> {
+  async createPayment(countryId: number, paymentData: FlutterwavePaymentData): Promise<FlutterwaveResponse | null> {
     try {
-      await this.loadConfig()
-      const response = await fetch(`${this.config.baseUrl}/payments`, {
+      const headers = await this.getHeaders(countryId)
+      const response = await fetch(`${this.baseUrl}/payments`, {
         method: 'POST',
-        headers: await this.getHeaders(),
+        headers,
         body: JSON.stringify(paymentData)
       })
 
@@ -245,12 +240,12 @@ class FlutterwaveService {
     }
   }
 
-  async createTransfer(transferData: FlutterwaveTransferData): Promise<FlutterwaveTransferResponse | null> {
+  async createTransfer(countryId: number, transferData: FlutterwaveTransferData): Promise<FlutterwaveTransferResponse | null> {
     try {
-      await this.loadConfig()
-      const response = await fetch(`${this.config.baseUrl}/transfers`, {
+      const headers = await this.getHeaders(countryId)
+      const response = await fetch(`${this.baseUrl}/transfers`, {
         method: 'POST',
-        headers: await this.getHeaders(),
+        headers,
         body: JSON.stringify(transferData)
       })
 
@@ -277,12 +272,12 @@ class FlutterwaveService {
     }
   }
 
-  async verifyAccountNumber(accountNumber: string, bankCode: string): Promise<any> {
+  async verifyAccountNumber(countryId: number, accountNumber: string, bankCode: string): Promise<any> {
     try {
-      await this.loadConfig()
-      const response = await fetch(`${this.config.baseUrl}/accounts/resolve`, {
+      const headers = await this.getHeaders(countryId)
+      const response = await fetch(`${this.baseUrl}/accounts/resolve`, {
         method: 'POST',
-        headers: await this.getHeaders(),
+        headers,
         body: JSON.stringify({
           account_number: accountNumber,
           account_bank: bankCode
@@ -302,14 +297,14 @@ class FlutterwaveService {
     }
   }
 
-  async verifyPayment(transactionId: string): Promise<any> {
+  async verifyPayment(countryId: number, transactionId: string): Promise<any> {
     try {
-      await this.loadConfig()
+      const headers = await this.getHeaders(countryId)
       console.log('Verifying Flutterwave payment:', transactionId)
       
-      const response = await fetch(`${this.config.baseUrl}/transactions/${transactionId}/verify`, {
+      const response = await fetch(`${this.baseUrl}/transactions/${transactionId}/verify`, {
         method: 'GET',
-        headers: await this.getHeaders()
+        headers
       })
 
       const data = await response.json()
@@ -332,86 +327,49 @@ class FlutterwaveService {
     }
   }
 
-  async getSupportedCountries(): Promise<any[]> {
-    try {
-      const response = await fetch(`${this.config.baseUrl}/countries`, {
-        headers: await this.getHeaders()
-      })
 
-      const data = await response.json()
-      
-      if (data.status === 'success') {
-        return data.data || []
-      }
-      
-      return []
-    } catch (error) {
-      console.error('Error fetching supported countries:', sanitizeForLog(error))
-      return []
-    }
-  }
 
   generateTxRef(): string {
     return `GIC_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
   }
 
-  async getBalance(currency: string): Promise<number | null> {
+  async getBalance(countryId: number): Promise<{ totalBalance: number; balancesByCurrency: any[] } | null> {
     try {
-      await this.loadConfig()
+      const headers = await this.getHeaders(countryId)
       
-      if (!this.config.secretKey) {
-        console.error('Flutterwave secret key not configured')
-        return null
-      }
-      
-      const generalResponseZ = await fetch(`${this.config.baseUrl}/balances`, {
-            method: 'GET',
-            headers: await this.getHeaders()
-          });
-      console.log("List avaliblieded ",await generalResponseZ.json())
-      const response = await fetch(`${this.config.baseUrl}/balances/${currency}`, {
+      const response = await fetch(`${this.baseUrl}/balances`, {
         method: 'GET',
-        headers: await this.getHeaders()
+        headers
       })
 
       if (!response.ok) {
-        if (response.status === 404) {
-          // Try general balances endpoint
-          console.log('Trying general balances endpoint...')
-          const generalResponse = await fetch(`${this.config.baseUrl}/balances`, {
-            method: 'GET',
-            headers: await this.getHeaders()
-          })
-          
-          if (generalResponse.ok) {
-            const data = await generalResponse.json()
-            console.log('Flutterwave general balances response:', sanitizeForLog(data))
-            
-            if (data.status === 'success' && Array.isArray(data.data)) {
-              const balance = data.data.find((b: any) => b.currency === currency)
-              const availableBalance = balance ? parseFloat(balance.available_balance) || 0 : 0
-              console.log(`Flutterwave balance for ${currency}:`, availableBalance)
-              return availableBalance
-            }
-          }
-        }
         console.error(`Flutterwave API error: ${response.status} ${response.statusText}`)
         return null
       }
 
       const data = await response.json()
-      console.log('Flutterwave balance response:', sanitizeForLog(data))
+      console.log('Flutterwave balances response:', sanitizeForLog(data))
       
-      if (data.status === 'success' && data.data) {
-        const availableBalance = parseFloat(data.data.available_balance) || 0
-        console.log(`Flutterwave balance for ${currency}:`, availableBalance)
-        return availableBalance
+      if (data.status === 'success' && Array.isArray(data.data)) {
+        const balances = data.data.map((b: any) => ({
+          currency: b.currency,
+          availableBalance: parseFloat(b.available_balance) || 0,
+          ledgerBalance: parseFloat(b.ledger_balance) || 0
+        }))
+        
+        // Calculer le solde total en USD (ou devise de référence)
+        const totalBalance = balances.reduce((sum, b) => sum + b.availableBalance, 0)
+        
+        return {
+          totalBalance,
+          balancesByCurrency: balances
+        }
       }
       
       console.error('Flutterwave balance API returned error:', sanitizeForLog(data))
       return null
     } catch (error) {
-      console.error('Error getting Flutterwave balance:', sanitizeForLog(error))
+      console.error(`Error getting Flutterwave balance for country ${countryId}:`, sanitizeForLog(error))
       return null
     }
   }
@@ -487,7 +445,7 @@ class FlutterwaveService {
       }
 
       try {
-        const transferResult = await this.createTransfer(transferData)
+        const transferResult = await this.createTransfer(transaction.receiverCountryId, transferData)
         
         if (transferResult) {
           // Update transaction with transfer details
@@ -583,7 +541,7 @@ class FlutterwaveService {
         }
       }
 
-      const result = await this.createPayment(paymentData)
+      const result = await this.createPayment(transaction.senderCountryId, paymentData)
       
       if (result) {
         return { success: true, paymentUrl: result.data.link }

@@ -6,13 +6,16 @@ export const dynamic = 'force-dynamic'
 
 export async function POST() {
   try {
-    // Récupérer tous les sous-wallets Flutterwave
+    // Récupérer tous les sous-wallets Flutterwave avec configuration
     const flutterwaveSubWallets = await prisma.subWallet.findMany({
       where: {
         readOnly: true,
         countryPaymentMethod: {
           paymentMethod: {
             type: 'FLUTTERWAVE'
+          },
+          apiConfig: {
+            not: null
           }
         }
       },
@@ -31,19 +34,39 @@ export async function POST() {
     })
 
     let updatedCount = 0
+    const results = []
 
     for (const subWallet of flutterwaveSubWallets) {
-      const country = subWallet.wallet.country
-      if (country.currencyCode) {
-        const newBalance = await flutterwaveService.getBalance(country.currencyCode)
+      const countryId = subWallet.wallet.country.id
+      const countryName = subWallet.wallet.country.name
+      
+      try {
+        const balanceData = await flutterwaveService.getBalance(countryId)
         
-        if (newBalance !== null && newBalance !== subWallet.balance.toNumber()) {
+        if (balanceData) {
+          const { totalBalance, balancesByCurrency } = balanceData
+          
           await prisma.subWallet.update({
             where: { id: subWallet.id },
-            data: { balance: newBalance as number }
+            data: { 
+              balance: totalBalance,
+              balanceDetails: JSON.stringify(balancesByCurrency)
+            }
           })
+          
           updatedCount++
+          results.push({
+            country: countryName,
+            totalBalance,
+            currencies: balancesByCurrency.length
+          })
         }
+      } catch (error) {
+        console.error(`Error syncing ${countryName}:`, error)
+        results.push({
+          country: countryName,
+          error: 'Sync failed'
+        })
       }
     }
 
@@ -64,8 +87,9 @@ export async function POST() {
     }
 
     return NextResponse.json({ 
-      message: `${updatedCount} soldes Flutterwave synchronisés`,
-      updatedCount 
+      message: `${updatedCount} comptes Flutterwave synchronisés`,
+      updatedCount,
+      results
     })
   } catch (error) {
     console.error('Sync Flutterwave error:', error)

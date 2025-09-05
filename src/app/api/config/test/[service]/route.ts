@@ -15,8 +15,7 @@ export async function POST(
         return await testEmailService()
       case 'sms':
         return await testSMSService()
-      case 'payment':
-        return await testPaymentService()
+
       case 'cinetpay':
         return await testCinetPayService()
       case 'api':
@@ -119,40 +118,7 @@ async function testSMSService() {
   }
 }
 
-async function testPaymentService() {
-  try {
-    const config = await ConfigService.getFlutterwaveConfig()
 
-    if (!config.publicKey || !config.secretKey) {
-      return NextResponse.json(
-        { message: 'Configuration Flutterwave incomplète' },
-        { status: 400 }
-      )
-    }
-
-    const response = await fetch('https://api.flutterwave.com/v3/banks/NG', {
-      headers: {
-        'Authorization': `Bearer ${config.secretKey}`
-      }
-    })
-
-    if (response.ok) {
-      return NextResponse.json({
-        message: 'Connexion Flutterwave réussie'
-      })
-    } else {
-      return NextResponse.json(
-        { message: 'Clés Flutterwave invalides' },
-        { status: 400 }
-      )
-    }
-  } catch (error: any) {
-    return NextResponse.json(
-      { message: `Erreur Flutterwave: ${error.message}` },
-      { status: 400 }
-    )
-  }
-}
 
 async function testCinetPayService() {
   try {

@@ -45,32 +45,10 @@ export class BankService {
   // Récupérer les banques depuis Flutterwave pour un pays
   static async fetchFlutterwaveBanks(countryCode: string): Promise<BankData[]> {
     try {
-      const config = await ConfigService.getFlutterwaveConfig()
-      if (!config.secretKey) {
-        console.log('Flutterwave non configuré')
-        return []
-      }
-
-      const response = await fetch(`https://api.flutterwave.com/v3/banks/${countryCode}`, {
-        headers: {
-          'Authorization': `Bearer ${config.secretKey}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (!response.ok) {
-        console.log(`Flutterwave API error: ${response.status}`)
-        return []
-      }
-      
-      const data = await response.json()
-      return (data.data || []).map((bank: any) => ({
-        name: bank.name,
-        code: bank.code,
-        logo: bank.logo || null,
-        website: bank.website || null,
-        swiftCode: bank.swift_code || null
-      }))
+      // Flutterwave est maintenant configuré par pays, pas globalement
+      // On retourne un tableau vide car les banques seront récupérées via l'API pays-spécifique
+      console.log('Flutterwave banks: Configuration par pays requise')
+      return []
     } catch (error) {
       console.error('Erreur Flutterwave banks:', error)
       return []
@@ -199,41 +177,10 @@ export class BankService {
         }
       }
 
-      // 6. Synchroniser Flutterwave
-      for (const bank of flutterwaveBanks) {
-        try {
-          await prisma.bank.upsert({
-            where: {
-              code_countryCode: {
-                code: bank.code,
-                countryCode: countryCode
-              }
-            },
-            update: {
-              name: bank.name,
-              logo: bank.logo,
-              website: bank.website,
-              swiftCode: bank.swiftCode,
-              source: 'FLUTTERWAVE',
-              active: true,
-              updatedAt: new Date()
-            },
-            create: {
-              name: bank.name,
-              code: bank.code,
-              countryCode: countryCode,
-              logo: bank.logo,
-              website: bank.website,
-              swiftCode: bank.swiftCode,
-              source: 'FLUTTERWAVE',
-              active: true
-            }
-          })
-          result.flutterwave++
-        } catch (error) {
-          result.errors.push(`Flutterwave ${bank.name}: ${sanitizeForLog(error)}`)
-        }
-      }
+      // 6. Synchroniser Flutterwave (désactivé - configuration par pays)
+      // Flutterwave est maintenant configuré individuellement par pays
+      console.log('Flutterwave: Synchronisation désactivée (configuration par pays)')
+      result.flutterwave = 0
 
       // 7. Synchroniser APIs locales
       for (const bank of otherApiBanks) {

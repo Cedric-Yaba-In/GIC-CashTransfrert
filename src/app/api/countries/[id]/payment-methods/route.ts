@@ -56,11 +56,14 @@ export async function POST(
     
     // Si c'est Flutterwave ou CinetPay, récupérer le solde depuis l'API
     if (countryPaymentMethod.paymentMethod.type === 'FLUTTERWAVE') {
-      const country = await prisma.country.findUnique({ where: { id: countryId } })
-      if (country?.currencyCode) {
-        const balance = await flutterwaveService.getBalance(country.currencyCode)
-        initialBalance = balance ?? 0
+      try {
+        const balanceData = await flutterwaveService.getBalance(countryId)
+        initialBalance = balanceData?.totalBalance ?? 0
         isReadOnly = true // Flutterwave est en lecture seule
+      } catch (error) {
+        console.log('Flutterwave balance not available, using 0')
+        initialBalance = 0
+        isReadOnly = true
       }
     } else if (countryPaymentMethod.paymentMethod.type === 'CINETPAY') {
       // CinetPay fonctionne comme Flutterwave - solde synchronisé automatiquement

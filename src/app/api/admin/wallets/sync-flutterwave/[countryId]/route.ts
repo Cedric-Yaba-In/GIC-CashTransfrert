@@ -1,42 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 import { flutterwaveService } from '@/lib/flutterwave'
+import { ExchangeRateService } from '@/lib/exchange-rates'
 
-const prisma = new PrismaClient()
+export const dynamic = 'force-dynamic'
 
 export async function POST(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { countryId: string } }
 ) {
   try {
     const countryId = parseInt(params.countryId)
 
-    // Vérifier que le pays existe
-    const country = await prisma.country.findUnique({
-      where: { id: countryId }
-    })
-
-    if (!country) {
-      return NextResponse.json(
-        { error: 'Pays non trouvé' },
-        { status: 404 }
-      )
-    }
-
     // Récupérer le sous-wallet Flutterwave pour ce pays
-    const subWallet = await prisma.subWallet.findFirst({
+    const flutterwaveSubWallet = await prisma.subWallet.findFirst({
       where: {
-        wallet: {
-          countryId: countryId
-        },
+        readOnly: true,
         countryPaymentMethod: {
+          countryId,
           paymentMethod: {
             type: 'FLUTTERWAVE'
           }
         }
       },
       include: {
-        bank: true,
         wallet: {
           include: {
             country: true
@@ -50,65 +37,61 @@ export async function POST(
       }
     })
 
-    if (!subWallet) {
-      return NextResponse.json(
-        { error: 'Aucun sous-wallet Flutterwave trouvé pour ce pays' },
-        { status: 404 }
-      )
+    if (!flutterwaveSubWallet) {
+      return NextResponse.json({ 
+        error: 'Flutterwave non configuré pour ce pays' 
+      }, { status: 404 })
     }
 
-    console.log("Fetching Flutterwave balance for currency:", country.currencyCode)
-    // Récupérer le solde réel depuis l'API Flutterwave via le service
-    const newFlutterwaveBalance = await flutterwaveService.getBalance(country.currencyCode)
+    // Récupérer les soldes depuis l'API Flutterwave
+    const balanceData = await flutterwaveService.getBalance(countryId)
     
-    if (newFlutterwaveBalance === null) {
-      return NextResponse.json(
-        { 
-          error: 'Impossible de récupérer le solde Flutterwave', 
-          details: 'Timeout ou erreur de connexion à l\'API Flutterwave',
-          suggestion: 'Vérifiez votre connexion internet et les clés API Flutterwave'
-        },
-        { status: 500 }
-      )
+    if (!balanceData) {
+      return NextResponse.json({ 
+        error: 'Impossible de récupérer les soldes Flutterwave' 
+      }, { status: 500 })
     }
 
-    // Sauvegarder l'ancien solde pour calculer la différence
-    const oldBalance = Number(subWallet.balance)
-    
-    // Mettre à jour le solde du sous-wallet avec le nouveau solde exact
-    const updatedSubWallet = await prisma.subWallet.update({
-      where: { id: subWallet.id },
-      data: { balance: Number(newFlutterwaveBalance) }
-    })
+    const { totalBalance, balancesByCurrency } = balanceData
 
-    // Recalculer le solde total du wallet principal en additionnant tous les sous-wallets
-    const totalBalance = await prisma.subWallet.aggregate({
-      where: { walletId: subWallet.walletId },
-      _sum: { balance: true }
-    })
-
-    // Mettre à jour le solde du wallet principal avec le total exact
-    await prisma.wallet.update({
-      where: { id: subWallet.walletId },
-      data: { balance: Number(totalBalance._sum.balance) || 0 }
-    })
-
-    return NextResponse.json({
-      message: `Solde Flutterwave synchronisé pour ${country.name}`,
-      country: country.name,
-      oldBalance: oldBalance,
-      newBalance: newFlutterwaveBalance,
-      totalWalletBalance: Number(totalBalance._sum.balance) || 0,
-      subWallet: updatedSubWallet
-    })
-
-  } catch (error) {
-    console.error('Erreur lors de la synchronisation Flutterwave:', error)
-    return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
-      { status: 500 }
+    // Convertir le solde total dans la devise du pays
+    const countryCurrency = flutterwaveSubWallet.wallet.country.currencyCode
+    const totalInCountryCurrency = ExchangeRateService.convertToCountryCurrency(
+      balancesByCurrency,
+      countryCurrency
     )
-  } finally {
-    await prisma.$disconnect()
+
+    // Mettre à jour le sous-wallet avec le solde converti et les détails
+    await prisma.subWallet.update({
+      where: { id: flutterwaveSubWallet.id },
+      data: { 
+        balance: totalInCountryCurrency,
+        balanceDetails: JSON.stringify(balancesByCurrency)
+      }
+    })
+
+    // Recalculer le solde total du wallet
+    const subWallets = await prisma.subWallet.findMany({
+      where: { walletId: flutterwaveSubWallet.walletId }
+    })
+    
+    const totalWalletBalance = subWallets.reduce((sum, sw) => sum + sw.balance.toNumber(), 0)
+    
+    await prisma.wallet.update({
+      where: { id: flutterwaveSubWallet.walletId },
+      data: { balance: totalWalletBalance }
+    })
+
+    return NextResponse.json({ 
+      message: `Soldes Flutterwave synchronisés pour ${flutterwaveSubWallet.wallet.country.name}`,
+      totalBalance: totalInCountryCurrency,
+      totalBalanceUSD: totalBalance,
+      balancesByCurrency,
+      countryCurrency,
+      updatedAt: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Sync Flutterwave error:', error)
+    return NextResponse.json({ error: 'Erreur de synchronisation' }, { status: 500 })
   }
 }

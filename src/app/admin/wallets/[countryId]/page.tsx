@@ -7,6 +7,7 @@ import { ArrowLeft, Plus, Minus, Wallet, CreditCard, RefreshCw } from 'lucide-re
 import AdminLayout from '@/components/AdminLayout'
 import ContentLoader from '@/components/ContentLoader'
 import { formatAmount } from '@/lib/formatters'
+import FlutterwaveBalanceDetails from '@/components/FlutterwaveBalanceDetails'
 
 export default function WalletDetailPage() {
   const router = useRouter()
@@ -180,10 +181,18 @@ export default function WalletDetailPage() {
                           </div>
                           
                           <div className="flex items-center space-x-6">
-                            <div className="text-right">
-                              <p className="text-2xl font-bold text-[#0B3371]">{formatAmount(subWallet.balance)}</p>
-                              <p className="text-slate-500">{wallet.country?.currencyCode || 'N/A'}</p>
-                            </div>
+                            {subWallet.countryPaymentMethod?.paymentMethod?.type === 'FLUTTERWAVE' ? (
+                              <FlutterwaveBalanceDetails
+                                balanceDetails={subWallet.balanceDetails}
+                                totalBalance={subWallet.balance}
+                                countryCode={wallet.country?.currencyCode || 'N/A'}
+                              />
+                            ) : (
+                              <div className="text-right">
+                                <p className="text-2xl font-bold text-[#0B3371]">{formatAmount(subWallet.balance)}</p>
+                                <p className="text-slate-500">{wallet.country?.currencyCode || 'N/A'}</p>
+                              </div>
+                            )}
                             
                             <div className="flex items-center space-x-2">
                               {subWallet.countryPaymentMethod?.paymentMethod?.type === 'FLUTTERWAVE' ? (
@@ -199,7 +208,7 @@ export default function WalletDetailPage() {
                                       
                                       if (response.ok) {
                                         const result = await response.json()
-                                        toast.success('Synchronisation réussie', `Solde Flutterwave synchronisé pour ${result.country}`)
+                                        toast.success('Synchronisation réussie', result.message)
                                         fetchWallet()
                                       } else {
                                         const error = await response.json()

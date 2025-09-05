@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ToastProvider'
-import { Plus, Globe, Settings, Search, Eye, ToggleLeft, ToggleRight, CreditCard, MapPin, DollarSign, X, Check } from 'lucide-react'
+import { Plus, Globe, Settings, Search, Eye, ToggleLeft, ToggleRight, CreditCard, MapPin, DollarSign, X, Check, Key } from 'lucide-react'
 import AdminLayout from '@/components/AdminLayout'
 import ContentLoader from '@/components/ContentLoader'
 import CountrySelect from '@/components/CountrySelect'
 import RegionSelect from '@/components/RegionSelect'
+import FlutterwaveConfigModal from '@/components/FlutterwaveConfigModal'
 
 interface Country {
   id: number
@@ -61,6 +62,9 @@ export default function AdminCountriesPage() {
   const [paymentMethods, setPaymentMethods] = useState<any[]>([])
   const [configuring, setConfiguring] = useState<number | null>(null)
   const [removing, setRemoving] = useState<number | null>(null)
+  const [showFlutterwaveModal, setShowFlutterwaveModal] = useState(false)
+  const [flutterwaveCountry, setFlutterwaveCountry] = useState<Country | null>(null)
+  const [flutterwaveConfigs, setFlutterwaveConfigs] = useState<Record<number, boolean>>({})
 
   const [user] = useState({ name: 'Admin', email: 'admin@gicpromoteltd.com' })
   
@@ -89,6 +93,30 @@ export default function AdminCountriesPage() {
       const response = await fetch('/api/countries')
       const data = await response.json()
       setCountries(Array.isArray(data) ? data : [])
+      
+      // Vérifier les configurations Flutterwave
+      const configs: Record<number, boolean> = {}
+      for (const country of data) {
+        if ((country.paymentMethods || []).some((pm: any) => pm.paymentMethod?.type === 'FLUTTERWAVE')) {
+          try {
+            const configResponse = await fetch(`/api/countries/${country.id}/flutterwave/status`)
+            if (configResponse.ok) {
+              const configData = await configResponse.json()
+              configs[country.id] = configData.configured
+              console.log(`Flutterwave config for ${country.name}:`, configData.configured)
+            } else {
+              configs[country.id] = false
+            }
+          } catch (error) {
+            console.error(`Error checking Flutterwave config for ${country.name}:`, error)
+            configs[country.id] = false
+          }
+        } else {
+          configs[country.id] = false
+        }
+      }
+      console.log('All Flutterwave configs:', configs)
+      setFlutterwaveConfigs(configs)
     } catch (error) {
       toast.error('Erreur de chargement', 'Impossible de charger les pays')
       setCountries([])
@@ -908,7 +936,7 @@ export default function AdminCountriesPage() {
         {/* Modal de configuration des méthodes de paiement */}
         {showConfigModal && selectedCountryConfig && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
               {/* Header */}
               <div className="bg-gradient-to-r from-[#0B3371] to-[#0B3371]/80 p-6 text-white">
                 <div className="flex items-center justify-between">
@@ -948,12 +976,22 @@ export default function AdminCountriesPage() {
                   
                   {paymentMethods.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {paymentMethods.map((method) => {
+                      {paymentMethods.filter((method) => {
+                        // Si c'est Flutterwave et qu'il est déjà configuré pour ce pays, ne pas l'afficher
+                        if (method.type === 'FLUTTERWAVE') {
+                          const hasFlutterwaveConfig = (selectedCountryConfig.paymentMethods || []).some(
+                            (pm: any) => pm.paymentMethod?.type === 'FLUTTERWAVE'
+                          )
+                          return !hasFlutterwaveConfig
+                        }
+                        return true
+                      }).map((method) => {
                         const configuredMethod = (selectedCountryConfig.paymentMethods || []).find(
                           (pm: any) => pm.paymentMethodId === method.id
                         )
                         const isConfigured = !!configuredMethod
                         const isGlobalMethod = method.isGlobal || method.type === 'FLUTTERWAVE' || method.type === 'CINETPAY'
+                        const isFlutterwave = method.type === 'FLUTTERWAVE'
                         
                         // Pour BANK_TRANSFER, vérifier s'il est déjà activé (même avec un autre ID)
                         const isBankTransferConfigured = method.type === 'BANK_TRANSFER' && 
@@ -990,9 +1028,11 @@ export default function AdminCountriesPage() {
                               }`}>
                                 {finalIsConfigured 
                                   ? 'Configuré' 
-                                  : isGlobalMethod 
-                                    ? 'Configuration globale'
-                                    : 'Non configuré'
+                                  : isFlutterwave 
+                                    ? 'Configuration locale'
+                                    : isGlobalMethod 
+                                      ? 'Configuration globale'
+                                      : 'Non configuré'
                                 }
                               </span>
                             </div>
@@ -1000,7 +1040,12 @@ export default function AdminCountriesPage() {
                             <div className="text-sm text-gray-600 mb-3">
                               <p>Montant global: {method.minAmount} - {method.maxAmount || '∞'} {selectedCountryConfig.currencyCode}</p>
                               <p>Statut global: {method.active ? 'Actif' : 'Inactif'}</p>
-                              {isGlobalMethod && !finalIsConfigured && (
+                              {isFlutterwave && !finalIsConfigured && (
+                                <p className="text-blue-600 font-medium mt-1">
+                                  🔧 Configuration par pays - Nécessite des clés API
+                                </p>
+                              )}
+                              {isGlobalMethod && !isFlutterwave && !finalIsConfigured && (
                                 <p className="text-blue-600 font-medium mt-1">
                                   🌐 Configuration centralisée - Prêt à utiliser
                                 </p>
@@ -1014,37 +1059,52 @@ export default function AdminCountriesPage() {
                             
                             <div className="flex space-x-2">
                               {!finalIsConfigured ? (
-                                <button
-                                  onClick={() => addPaymentMethodToCountry(method.id)}
-                                  disabled={configuring === method.id}
-                                  className="flex-1 flex items-center justify-center space-x-2 py-2 px-4 bg-[#0B3371] text-white hover:bg-[#0B3371]/90 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {configuring === method.id ? (
-                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                  ) : null}
-                                  <span>
-                                    {configuring === method.id 
-                                      ? 'Activation...' 
-                                      : method.type === 'BANK_TRANSFER'
-                                        ? 'Activer les virements'
-                                        : isGlobalMethod 
-                                          ? 'Activer pour ce pays'
-                                          : 'Configurer'
-                                    }
-                                  </span>
-                                </button>
-                              ) : (
                                 <>
                                   <button
                                     onClick={() => addPaymentMethodToCountry(method.id)}
                                     disabled={configuring === method.id}
-                                    className="flex-1 flex items-center justify-center space-x-2 py-2 px-4 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="flex-1 flex items-center justify-center space-x-2 py-2 px-4 bg-[#0B3371] text-white hover:bg-[#0B3371]/90 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
                                     {configuring === method.id ? (
-                                      <div className="w-4 h-4 border-2 border-yellow-700/30 border-t-yellow-700 rounded-full animate-spin" />
+                                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                     ) : null}
-                                    <span>{configuring === method.id ? 'Modification...' : 'Modifier'}</span>
+                                    <span>
+                                      {configuring === method.id 
+                                        ? 'Activation...' 
+                                        : method.type === 'BANK_TRANSFER'
+                                          ? 'Activer les virements'
+                                          : isGlobalMethod 
+                                            ? 'Ajouter au pays'
+                                            : 'Configurer'
+                                      }
+                                    </span>
                                   </button>
+
+                                </>
+                              ) : (
+                                <>
+                                  {isFlutterwave && (
+                                    <div className="flex-1 space-y-2">
+                                      <button
+                                        onClick={() => {
+                                          setFlutterwaveCountry(selectedCountryConfig)
+                                          setShowFlutterwaveModal(true)
+                                        }}
+                                        className="w-full flex items-center justify-center space-x-2 py-2 px-4 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors"
+                                        title="Configurer les clés API Flutterwave"
+                                      >
+                                        <Key className="w-4 h-4" />
+                                        <span>Configurer</span>
+                                      </button>
+                                      <div className="text-xs text-center">
+                                        {flutterwaveConfigs[selectedCountryConfig.id] ? (
+                                          <span className="text-green-600">✓ Configuré</span>
+                                        ) : (
+                                          <span className="text-orange-600">⚠ À configurer</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
                                   <button
                                     onClick={() => removePaymentMethodFromCountry(method.id)}
                                     disabled={removing === method.id}
@@ -1091,35 +1151,61 @@ export default function AdminCountriesPage() {
                     </h3>
                     
                     <div className="space-y-3">
-                      {(selectedCountryConfig.paymentMethods || []).map((pm: any) => (
-                        <div key={pm.id} className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-[#0B3371]/10 rounded-lg flex items-center justify-center">
-                              <CreditCard className="w-4 h-4 text-[#0B3371]" />
+                      {(selectedCountryConfig.paymentMethods || []).map((pm: any) => {
+                        const isFlutterwave = pm.paymentMethod?.type === 'FLUTTERWAVE'
+                        
+                        return (
+                          <div key={pm.id} className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-[#0B3371]/10 rounded-lg flex items-center justify-center">
+                                <CreditCard className="w-4 h-4 text-[#0B3371]" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{pm.paymentMethod?.name || 'N/A'}</p>
+                                <p className="text-sm text-gray-500">
+                                  Configuré le {new Date(pm.createdAt || Date.now()).toLocaleDateString('fr-FR')}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{pm.paymentMethod?.name || 'N/A'}</p>
-                              <p className="text-sm text-gray-500">
-                                Configuré le {new Date(pm.createdAt || Date.now()).toLocaleDateString('fr-FR')}
-                              </p>
+                            <div className="flex items-center space-x-2">
+                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                pm.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                {pm.active ? 'Actif' : 'Inactif'}
+                              </span>
+                              {isFlutterwave && (
+                                <div className="flex flex-col items-center space-y-1">
+                                  <button
+                                    onClick={() => {
+                                      setFlutterwaveCountry(selectedCountryConfig)
+                                      setShowFlutterwaveModal(true)
+                                    }}
+                                    className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium"
+                                    title="Configurer les clés API Flutterwave"
+                                  >
+                                    <Key className="w-3 h-3" />
+                                    <span>Config</span>
+                                  </button>
+                                  <div className="text-xs">
+                                    {flutterwaveConfigs[selectedCountryConfig.id] ? (
+                                      <span className="text-green-600">✓ OK</span>
+                                    ) : (
+                                      <span className="text-orange-600">⚠ Requis</span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              <button 
+                                onClick={() => removePaymentMethodFromCountry(pm.paymentMethodId)}
+                                className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                                title="Supprimer cette méthode"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              pm.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                            }`}>
-                              {pm.active ? 'Actif' : 'Inactif'}
-                            </span>
-                            <button 
-                              onClick={() => removePaymentMethodFromCountry(pm.paymentMethodId)}
-                              className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                              title="Supprimer cette méthode"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -1159,6 +1245,24 @@ export default function AdminCountriesPage() {
             </div>
           </div>
         )}
+
+        {/* Modal de configuration Flutterwave */}
+        <FlutterwaveConfigModal
+          isOpen={showFlutterwaveModal}
+          onClose={() => {
+            setShowFlutterwaveModal(false)
+            setFlutterwaveCountry(null)
+          }}
+          countryId={flutterwaveCountry?.id || 0}
+          countryName={flutterwaveCountry?.name || ''}
+          onSuccess={() => {
+            fetchCountries()
+            // Rafraîchir aussi les configurations Flutterwave
+            setTimeout(() => {
+              fetchCountries()
+            }, 500)
+          }}
+        />
 
         {/* Liste des pays */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -1251,7 +1355,18 @@ export default function AdminCountriesPage() {
                             <div className="w-8 h-8 bg-[#F37521]/10 rounded-lg flex items-center justify-center">
                               <CreditCard className="w-4 h-4 text-[#F37521]" />
                             </div>
-                            <span className="font-medium text-[#0B3371] text-sm">{pm.paymentMethod?.name || 'N/A'}</span>
+                            <div>
+                              <span className="font-medium text-[#0B3371] text-sm">{pm.paymentMethod?.name || 'N/A'}</span>
+                              {pm.paymentMethod?.type === 'FLUTTERWAVE' && (
+                                <div className="text-xs mt-1">
+                                  {flutterwaveConfigs[country.id] ? (
+                                    <span className="text-green-600">✓ Configuré</span>
+                                  ) : (
+                                    <span className="text-orange-600">⚠ À configurer</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                             pm.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
