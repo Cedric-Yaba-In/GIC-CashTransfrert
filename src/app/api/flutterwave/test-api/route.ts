@@ -5,46 +5,37 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const currency = searchParams.get('currency') || 'XAF'
+    const countryId = searchParams.get('countryId')
 
-    const flutterwaveConfig = await ConfigService.getFlutterwaveConfig()
-    
-    console.log('Config check:', {
-      hasPublicKey: !!flutterwaveConfig.publicKey,
-      hasSecretKey: !!flutterwaveConfig.secretKey
-    })
-
-    if (!flutterwaveConfig.secretKey) {
+    if (!countryId) {
       return NextResponse.json({
-        error: 'No secret key configured'
-      })
+        error: 'countryId parameter is required'
+      }, { status: 400 })
     }
 
-    const response = await fetch(`https://api.flutterwave.com/v3/payment-methods?currency=${currency}`, {
-      headers: {
-        'Authorization': `Bearer ${flutterwaveConfig.secretKey}`,
-        'Content-Type': 'application/json'
-      }
-    })
-
-    const responseText = await response.text()
-    let responseData
+    // Utiliser le service Flutterwave qui gère les configurations par pays
+    const { flutterwaveService } = await import('@/lib/flutterwave')
     
     try {
-      responseData = JSON.parse(responseText)
-    } catch {
-      responseData = { rawResponse: responseText }
+      const paymentMethods = await flutterwaveService.getPaymentMethods(currency)
+      
+      return NextResponse.json({
+        status: 'success',
+        data: paymentMethods,
+        currency: currency,
+        countryId: parseInt(countryId)
+      })
+    } catch (error) {
+      return NextResponse.json({
+        error: 'Flutterwave API test failed',
+        details: error instanceof Error ? error.message : String(error)
+      }, { status: 500 })
     }
-
-    return NextResponse.json({
-      status: response.status,
-      data: responseData,
-      currency: currency
-    })
 
   } catch (error) {
     return NextResponse.json({
       error: 'Test failed',
       details: error instanceof Error ? error.message : String(error)
-    })
+    }, { status: 500 })
   }
 }

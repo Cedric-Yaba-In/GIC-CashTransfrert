@@ -41,4 +41,16 @@ export class ExchangeRateService {
 
     return totalInTargetCurrency
   }
+
+  static getAllRates(baseCurrency: string = 'USD'): Record<string, number> {
+    const rates: Record<string, number> = {}
+    
+    for (const currency of Object.keys(this.FIXED_RATES)) {
+      if (currency !== baseCurrency) {
+        rates[currency] = this.getExchangeRate(baseCurrency, currency)
+      }
+    }
+    
+    return rates
+  }
 }

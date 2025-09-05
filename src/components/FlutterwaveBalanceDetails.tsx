@@ -138,7 +138,7 @@ export default function FlutterwaveBalanceDetails({
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                       >
                         <option value="all">Tous les soldes</option>
-                        <option value="positive">Soldes > 0 uniquement</option>
+                        <option value="positive">Soldes &gt; 0 uniquement</option>
                       </select>
                     </div>
 
@@ -191,7 +191,7 @@ export default function FlutterwaveBalanceDetails({
                         <span className="font-medium text-blue-600">{filteredBalances.length}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Avec solde > 0:</span>
+                        <span className="text-gray-600">Avec solde &gt; 0:</span>
                         <span className="font-medium text-green-600">
                           {balances.filter(b => b.availableBalance > 0).length}
                         </span>

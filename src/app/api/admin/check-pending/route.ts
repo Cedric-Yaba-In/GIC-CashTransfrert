@@ -16,7 +16,8 @@ export async function POST() {
         }
       },
       include: {
-        senderPaymentMethod: true
+        senderPaymentMethod: true,
+        senderCountry: true
       }
     })
 
@@ -30,7 +31,7 @@ export async function POST() {
         if (transaction.senderPaymentMethod?.type === 'FLUTTERWAVE' && transaction.flutterwaveRef) {
           console.log(`Checking Flutterwave status for transaction ${transaction.id}`)
           
-          const verification = await flutterwaveService.verifyPayment(transaction.flutterwaveRef)
+          const verification = await flutterwaveService.verifyPayment(transaction.senderCountryId, transaction.flutterwaveRef)
           
           if (verification && verification.status === 'success') {
             const paymentStatus = verification.data?.status

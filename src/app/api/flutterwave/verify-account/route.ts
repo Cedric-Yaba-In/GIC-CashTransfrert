@@ -5,11 +5,11 @@ import { sanitizeForLog, sanitizeInput } from '@/lib/security'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { accountNumber, bankCode } = body
+    const { accountNumber, bankCode, countryId } = body
 
-    if (!accountNumber || !bankCode) {
+    if (!accountNumber || !bankCode || !countryId) {
       return NextResponse.json(
-        { error: 'Account number and bank code are required' },
+        { error: 'Account number, bank code and countryId are required' },
         { status: 400 }
       )
     }
@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
 
     // Vérifier le compte via Flutterwave
     const accountInfo = await flutterwaveService.verifyAccountNumber(
+      parseInt(countryId),
       sanitizedAccountNumber,
       sanitizedBankCode
     )

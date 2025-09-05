@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     if (status === 'successful' && transaction_id) {
       console.log('Verifying successful payment with Flutterwave')
-      const verification = await flutterwaveService.verifyPayment(transaction_id)
+      const verification = await flutterwaveService.verifyPayment(transaction.senderCountryId, transaction_id)
       console.log('Flutterwave verification result:', verification)
       
       if (verification && verification.status === 'success' && verification.data?.status === 'successful') {

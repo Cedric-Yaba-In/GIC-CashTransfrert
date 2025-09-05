@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Récupérer les banques depuis Flutterwave
-    const flutterwaveBanks = await flutterwaveService.getBanks(sanitizedCountryCode)
+    const flutterwaveBanks = await flutterwaveService.getBanks(country.id, sanitizedCountryCode)
     
     if (!flutterwaveBanks || flutterwaveBanks.length === 0) {
       return NextResponse.json(

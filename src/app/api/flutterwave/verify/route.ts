@@ -6,16 +6,16 @@ import { sanitizeForLog } from '@/lib/security'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { transaction_id, tx_ref } = body
+    const { transaction_id, tx_ref, countryId } = body
 
-    if (!transaction_id) {
+    if (!transaction_id || !countryId) {
       return NextResponse.json(
-        { error: 'Transaction ID is required' },
+        { error: 'Transaction ID and countryId are required' },
         { status: 400 }
       )
     }
 
-    const verification = await flutterwaveService.verifyPayment(transaction_id)
+    const verification = await flutterwaveService.verifyPayment(parseInt(countryId), transaction_id)
     
     if (verification && verification.status === 'successful') {
       // Update wallet balance

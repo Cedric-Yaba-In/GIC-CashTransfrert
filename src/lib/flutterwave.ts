@@ -358,7 +358,7 @@ class FlutterwaveService {
         }))
         
         // Calculer le solde total en USD (ou devise de référence)
-        const totalBalance = balances.reduce((sum, b) => sum + b.availableBalance, 0)
+        const totalBalance = balances.reduce((sum: number, b: any) => sum + b.availableBalance, 0)
         
         return {
           totalBalance,

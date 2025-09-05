@@ -1,12 +1,29 @@
 import { ConfigService } from './config'
+import { prisma } from './prisma'
 
 export class PaymentConfigService {
-  static async isConfigured(paymentType: string): Promise<boolean> {
+  static async isConfigured(paymentType: string, countryId?: number): Promise<boolean> {
     try {
       switch (paymentType) {
         case 'FLUTTERWAVE':
-          const flutterwaveConfig = await ConfigService.getFlutterwaveConfig()
-          return !!(flutterwaveConfig.publicKey && flutterwaveConfig.secretKey)
+          if (!countryId) return false
+          
+          const countryPaymentMethod = await prisma.countryPaymentMethod.findFirst({
+            where: {
+              countryId,
+              paymentMethod: { type: 'FLUTTERWAVE' },
+              active: true
+            }
+          })
+          
+          if (!countryPaymentMethod?.apiConfig) return false
+          
+          try {
+            const config = JSON.parse(countryPaymentMethod.apiConfig)
+            return !!(config.publicKey && config.secretKey)
+          } catch {
+            return false
+          }
         
         case 'CINETPAY':
           const cinetpayConfig = await ConfigService.getCinetPayConfig()

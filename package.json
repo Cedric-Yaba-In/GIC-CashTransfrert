@@ -13,7 +13,7 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "db:init": "npm run db:push && npm run db:seed",
+    "db:init": "npm run db:push && npm run db:seed" ,
     "flutterwave:init": "tsx scripts/init-flutterwave-methods.ts",
     "flutterwave:migrate": "tsx scripts/migrate-flutterwave-config.ts",
     "flutterwave:sync-banks": "node -e \"console.log('Use the API endpoint /api/flutterwave/sync-banks to sync banks for a specific country')\"",
