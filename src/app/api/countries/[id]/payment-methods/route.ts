@@ -10,6 +10,9 @@ export async function POST(
     const { paymentMethodId, minAmount, maxAmount, fees, bankId: reqBankId, accountNumber: reqAccountNumber, accountName: reqAccountName } = await request.json()
     const countryId = parseInt(params.id)
 
+    // Reconnect to database if connection is lost
+    await prisma.$connect()
+
     const countryPaymentMethod = await prisma.countryPaymentMethod.upsert({
       where: {
         countryId_paymentMethodId: {
@@ -113,7 +116,59 @@ export async function POST(
     return NextResponse.json(countryPaymentMethod)
   } catch (error) {
     console.error('Country payment method creation error:', error)
+    
+    // If it's a connection error, try to reconnect and retry once
+    if (error instanceof Error && (error.message.includes('connection') || error.message.includes('P1017'))) {
+      try {
+        await prisma.$disconnect()
+        await prisma.$connect()
+        console.log('Database reconnected, retrying operation...')
+        
+        // Retry the operation once
+        const { paymentMethodId, minAmount, maxAmount, fees, bankId: reqBankId, accountNumber: reqAccountNumber, accountName: reqAccountName } = await request.json()
+        const countryId = parseInt(params.id)
+        
+        const countryPaymentMethod = await prisma.countryPaymentMethod.upsert({
+          where: {
+            countryId_paymentMethodId: {
+              countryId,
+              paymentMethodId
+            }
+          },
+          update: {
+            minAmount: minAmount || null,
+            maxAmount: maxAmount || null,
+            fees: fees || 0,
+            active: true
+          },
+          create: {
+            countryId,
+            paymentMethodId,
+            minAmount: minAmount || null,
+            maxAmount: maxAmount || null,
+            fees: fees || 0,
+            active: true
+          },
+          include: {
+            paymentMethod: true
+          }
+        })
+        
+        return NextResponse.json(countryPaymentMethod)
+      } catch (retryError) {
+        console.error('Retry failed:', retryError)
+        return NextResponse.json({ error: 'Database connection failed' }, { status: 503 })
+      }
+    }
+    
     return NextResponse.json({ error: 'Failed to add payment method' }, { status: 500 })
+  } finally {
+    // Ensure connection is properly handled
+    try {
+      await prisma.$disconnect()
+    } catch (e) {
+      // Ignore disconnect errors
+    }
   }
 }
 
