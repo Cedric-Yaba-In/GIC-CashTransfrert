@@ -10,11 +10,12 @@ export async function POST(request: NextRequest) {
       currency, 
       customer, 
       paymentOptions,
-      transactionRef 
+      transactionRef,
+      countryId 
     } = body
 
     // Validation
-    if (!validateAmount(amount) || !currency || !customer || !paymentOptions) {
+    if (!validateAmount(amount) || !currency || !customer || !paymentOptions || !countryId) {
       return NextResponse.json(
         { error: 'Missing required parameters' },
         { status: 400 }
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const result = await flutterwaveService.createPayment(paymentData)
+    const result = await flutterwaveService.createPayment(parseInt(countryId), paymentData)
     
     if (result) {
       return NextResponse.json({

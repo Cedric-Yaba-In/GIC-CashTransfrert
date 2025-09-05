@@ -81,6 +81,8 @@ export default function TransferPage() {
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PaymentMethodAvailability[]>([])
   const [feeCalculation, setFeeCalculation] = useState<FeeCalculation | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadingSenderCountries, setLoadingSenderCountries] = useState(false)
+  const [loadingReceiverCountries, setLoadingReceiverCountries] = useState(false)
   const [step, setStep] = useState(1)
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<TransferForm>()
@@ -132,7 +134,8 @@ export default function TransferPage() {
 
   useEffect(() => {
     if (senderRegion) {
-      fetchCountriesByRegion(senderRegion, 'sender')
+      setLoadingSenderCountries(true)
+      fetchCountriesByRegion(senderRegion, 'sender').finally(() => setLoadingSenderCountries(false))
     } else {
       setSenderCountries([])
       setValue('senderCountryId', '')
@@ -141,7 +144,8 @@ export default function TransferPage() {
 
   useEffect(() => {
     if (receiverRegion) {
-      fetchCountriesByRegion(receiverRegion, 'receiver')
+      setLoadingReceiverCountries(true)
+      fetchCountriesByRegion(receiverRegion, 'receiver').finally(() => setLoadingReceiverCountries(false))
     } else {
       setReceiverCountries([])
       setValue('receiverCountryId', '')
@@ -331,261 +335,103 @@ export default function TransferPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="p-4 sm:p-6 lg:p-8">
             {step === 1 && (
-              <div className="space-y-8">
-                {/* Sender Information */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 border border-blue-100">
-                  <div className="flex items-center mb-4 sm:mb-6">
-                    <div className="bg-blue-600 p-2 sm:p-3 rounded-lg sm:rounded-xl">
-                      <User className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              <div className="space-y-6 lg:space-y-8">
+                {/* Compact Three Column Layout */}
+                <div className="grid lg:grid-cols-3 gap-2">
+                  {/* Left Column - Sender Information */}
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-4 border border-blue-200 shadow-sm">
+                    <div className="flex items-center mb-4">
+                      <div className="bg-blue-600 p-2 rounded-lg">
+                        <User className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="ml-2">
+                        <h3 className="text-lg font-bold text-gray-900">Expéditeur</h3>
+                      </div>
                     </div>
-                    <div className="ml-3 sm:ml-4">
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-900">Informations de l'expéditeur</h3>
-                      <p className="text-sm sm:text-base text-gray-600 hidden sm:block">Vos coordonnées pour l'envoi</p>
-                    </div>
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
-                    <div className="space-y-2">
-                      <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
-                        <User className="h-4 w-4 mr-2 text-gray-500" />
-                        Nom complet *
-                      </label>
-                      <input
-                        {...register('senderName', { required: 'Nom requis' })}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm"
-                        placeholder="Votre nom complet"
-                      />
-                      {errors.senderName && (
-                        <p className="text-red-500 text-sm flex items-center mt-1">
-                          <AlertCircle className="h-4 w-4 mr-1" />
-                          {errors.senderName.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
-                        <Mail className="h-4 w-4 mr-2 text-gray-500" />
-                        Email *
-                      </label>
-                      <input
-                        {...register('senderEmail', { 
-                          required: 'Email requis',
-                          pattern: { value: /^\S+@\S+$/i, message: 'Email invalide' }
-                        })}
-                        type="email"
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm"
-                        placeholder="votre@email.com"
-                      />
-                      {errors.senderEmail && (
-                        <p className="text-red-500 text-sm flex items-center mt-1">
-                          <AlertCircle className="h-4 w-4 mr-1" />
-                          {errors.senderEmail.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
-                        <Globe className="h-4 w-4 mr-2 text-gray-500" />
-                        Région *
-                      </label>
-                      <select
-                        {...register('senderRegion', { required: 'Région requise' })}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm"
-                      >
-                        <option value="">Sélectionner une région</option>
-                        {regions.map(region => (
-                          <option key={region.id} value={region.code}>
-                            {region.name}
-                          </option>
-                        ))}
-                      </select>
-                      {errors.senderRegion && (
-                        <p className="text-red-500 text-sm flex items-center mt-1">
-                          <AlertCircle className="h-4 w-4 mr-1" />
-                          {errors.senderRegion.message}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <PhoneInput
-                        value={watch('senderPhone') || ''}
-                        onChange={(value) => setValue('senderPhone', value)}
-                        countries={senderCountries}
-                        label="Téléphone"
-                        required
-                        error={errors.senderPhone?.message}
-                        placeholder="123 456 789"
-                      />
-                      <input
-                        {...register('senderPhone', { required: 'Téléphone requis' })}
-                        type="hidden"
-                      />
-                    </div>
-                    <div className="lg:col-span-2 space-y-2">
-                      <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
-                        <MapPin className="h-4 w-4 mr-2 text-gray-500" />
-                        Pays *
-                      </label>
-                      <CountrySelect
-                        countries={senderCountries}
-                        value={senderCountryId || ''}
-                        onChange={(value) => {
-                          setValue('senderCountryId', value)
-                          // Déclencher la validation
-                          if (value) {
-                            setValue('senderCountryId', value, { shouldValidate: true })
-                          }
-                        }}
-                        placeholder="Sélectionner un pays"
-                        disabled={!senderRegion}
-                        error={errors.senderCountryId?.message}
-                      />
-                      <input
-                        {...register('senderCountryId', { required: 'Pays requis' })}
-                        type="hidden"
-                        value={senderCountryId || ''}
-                      />
-                      {errors.senderCountryId && (
-                        <p className="text-red-500 text-sm flex items-center mt-1">
-                          <AlertCircle className="h-4 w-4 mr-1" />
-                          {errors.senderCountryId.message}
-                        </p>
-                      )}
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <input
+                          {...register('senderName', { required: 'Nom requis' })}
+                          className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/90 text-sm"
+                          placeholder="Votre nom complet *"
+                        />
+                        {errors.senderName && <p className="text-red-500 text-xs mt-1">{errors.senderName.message}</p>}
+                      </div>
+                      
+                      <div>
+                        <input
+                          {...register('senderEmail', { 
+                            required: 'Email requis',
+                            pattern: { value: /^\S+@\S+$/i, message: 'Email invalide' }
+                          })}
+                          type="email"
+                          className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/90 text-sm"
+                          placeholder="Votre email *"
+                        />
+                        {errors.senderEmail && <p className="text-red-500 text-xs mt-1">{errors.senderEmail.message}</p>}
+                      </div>
+                      
+                      <div>
+                        <select
+                          {...register('senderRegion', { required: 'Région requise' })}
+                          className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/90 text-sm"
+                        >
+                          <option value="">Région *</option>
+                          {regions.map(region => (
+                            <option key={region.id} value={region.code}>{region.name}</option>
+                          ))}
+                        </select>
+                        {errors.senderRegion && <p className="text-red-500 text-xs mt-1">{errors.senderRegion.message}</p>}
+                      </div>
+                      
+                      <div>
+                        {loadingSenderCountries ? (
+                          <div className="w-full px-3 py-2 border border-blue-200 rounded-lg bg-white/90 text-sm flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                            <span className="text-gray-500">Chargement des pays...</span>
+                          </div>
+                        ) : (
+                          <CountrySelect
+                            countries={senderCountries}
+                            value={senderCountryId || ''}
+                            onChange={(value) => setValue('senderCountryId', value, { shouldValidate: true })}
+                            placeholder="Pays *"
+                            disabled={!senderRegion}
+                            error={errors.senderCountryId?.message}
+                          />
+                        )}
+                        <input {...register('senderCountryId', { required: 'Pays requis' })} type="hidden" value={senderCountryId || ''} />
+                        {errors.senderCountryId && <p className="text-red-500 text-xs mt-1">{errors.senderCountryId.message}</p>}
+                      </div>
+                      
+                      <div>
+                        <PhoneInput
+                          value={watch('senderPhone') || ''}
+                          onChange={(value) => setValue('senderPhone', value)}
+                          countries={senderCountries}
+                          label=""
+                          required
+                          error={errors.senderPhone?.message}
+                          placeholder="Téléphone *"
+                        />
+                        <input {...register('senderPhone', { required: 'Téléphone requis' })} type="hidden" />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Receiver Information */}
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-8 border border-green-100">
-                  <div className="flex items-center mb-6">
-                    <div className="bg-green-600 p-3 rounded-xl">
-                      <Send className="h-6 w-6 text-white" />
+                  {/* Middle Column - Amount */}
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-100 rounded-xl p-4 border border-purple-200 shadow-sm">
+                    <div className="flex items-center mb-4">
+                      <div className="bg-purple-600 p-2 rounded-lg">
+                        <DollarSign className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="ml-2">
+                        <h3 className="text-lg font-bold text-gray-900">Montant</h3>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <h3 className="text-xl font-bold text-gray-900">Informations du destinataire</h3>
-                      <p className="text-gray-600">Coordonnées de la personne qui recevra l'argent</p>
-                    </div>
-                  </div>
-                  <div className="grid lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
-                        <User className="h-4 w-4 mr-2 text-gray-500" />
-                        Nom complet *
-                      </label>
-                      <input
-                        {...register('receiverName', { required: 'Nom requis' })}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm"
-                        placeholder="Nom du destinataire"
-                      />
-                      {errors.receiverName && (
-                        <p className="text-red-500 text-sm flex items-center mt-1">
-                          <AlertCircle className="h-4 w-4 mr-1" />
-                          {errors.receiverName.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
-                        <Mail className="h-4 w-4 mr-2 text-gray-500" />
-                        Email <span className="text-gray-400">(optionnel)</span>
-                      </label>
-                      <input
-                        {...register('receiverEmail')}
-                        type="email"
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm"
-                        placeholder="email@destinataire.com"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
-                        <Globe className="h-4 w-4 mr-2 text-gray-500" />
-                        Région de destination *
-                      </label>
-                      <select
-                        {...register('receiverRegion', { required: 'Région requise' })}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm"
-                      >
-                        <option value="">Sélectionner une région</option>
-                        {regions.map(region => (
-                          <option key={region.id} value={region.code}>
-                            {region.name}
-                          </option>
-                        ))}
-                      </select>
-                      {errors.receiverRegion && (
-                        <p className="text-red-500 text-sm flex items-center mt-1">
-                          <AlertCircle className="h-4 w-4 mr-1" />
-                          {errors.receiverRegion.message}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <PhoneInput
-                        value={watch('receiverPhone') || ''}
-                        onChange={(value) => setValue('receiverPhone', value)}
-                        countries={receiverCountries}
-                        label="Téléphone"
-                        required
-                        error={errors.receiverPhone?.message}
-                        placeholder="123 456 789"
-                      />
-                      <input
-                        {...register('receiverPhone', { required: 'Téléphone requis' })}
-                        type="hidden"
-                      />
-                    </div>
-                    <div className="lg:col-span-2 space-y-2">
-                      <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
-                        <MapPin className="h-4 w-4 mr-2 text-gray-500" />
-                        Pays de destination *
-                      </label>
-                      <CountrySelect
-                        countries={receiverCountries}
-                        value={receiverCountryId || ''}
-                        onChange={(value) => {
-                          setValue('receiverCountryId', value)
-                          // Déclencher la validation
-                          if (value) {
-                            setValue('receiverCountryId', value, { shouldValidate: true })
-                          }
-                        }}
-                        placeholder="Sélectionner un pays"
-                        disabled={!receiverRegion}
-                        error={errors.receiverCountryId?.message}
-                      />
-                      <input
-                        {...register('receiverCountryId', { required: 'Pays requis' })}
-                        type="hidden"
-                        value={receiverCountryId || ''}
-                      />
-                      {errors.receiverCountryId && (
-                        <p className="text-red-500 text-sm flex items-center mt-1">
-                          <AlertCircle className="h-4 w-4 mr-1" />
-                          {errors.receiverCountryId.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-
-
-                {/* Amount */}
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-8 border border-purple-100">
-                  <div className="flex items-center mb-6">
-                    <div className="bg-purple-600 p-3 rounded-xl">
-                      <DollarSign className="h-6 w-6 text-white" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-xl font-bold text-gray-900">Montant à envoyer</h3>
-                      <p className="text-gray-600">Indiquez le montant que vous souhaitez transférer</p>
-                    </div>
-                  </div>
-                  <div className="grid lg:grid-cols-2 gap-8">
-                    <div className="space-y-2">
-                      <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
-                        <DollarSign className="h-4 w-4 mr-2 text-gray-500" />
-                        Montant *
-                      </label>
+                    
+                    <div className="space-y-3">
                       <div className="relative">
                         <input
                           {...register('amount', { 
@@ -594,167 +440,157 @@ export default function TransferPage() {
                           })}
                           type="number"
                           step="0.01"
-                          className="w-full px-4 py-4 text-2xl font-bold border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm"
+                          className="w-full px-3 py-3 pr-16 text-xl font-bold border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white/90"
                           placeholder="100.00"
                         />
                         {senderCountries.find(c => c.id === senderCountryId)?.currencyCode && (
-                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-bold">
                             {senderCountries.find(c => c.id === senderCountryId)?.currencyCode}
                           </div>
                         )}
                       </div>
-                      {errors.amount && (
-                        <p className="text-red-500 text-sm flex items-center mt-1">
-                          <AlertCircle className="h-4 w-4 mr-1" />
-                          {errors.amount.message}
-                        </p>
+                      {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>}
+                      
+                      {amount && senderCountryId && feeCalculation && (
+                        <div className="bg-white/90 p-3 rounded-lg border border-purple-200 text-xs">
+                          <div className="space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Vous payez:</span>
+                              <span className="font-bold text-purple-600">
+                                {Number((feeCalculation as any).summary?.totalPaid || 0).toFixed(2)} {feeCalculation.senderCurrency}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Destinataire reçoit:</span>
+                              <span className="font-bold text-green-600">
+                                {Number((feeCalculation as any).summary?.amountReceived || 0).toFixed(2)} {feeCalculation.receiverCurrency}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-500">Frais:</span>
+                              <span className="text-red-600">
+                                {Number((feeCalculation as any).fees?.total?.amount || 0).toFixed(2)} {(feeCalculation as any).fees?.total?.currency || 'USD'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {amount && senderCountryId && !feeCalculation && (
+                        <div className="text-center py-3">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600 mx-auto"></div>
+                          <p className="text-xs text-gray-500 mt-1">Calcul...</p>
+                        </div>
                       )}
                     </div>
-                    {amount && senderCountryId && (
-                      <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-gray-200 shadow-sm">
-                        <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-                          <CheckCircle className="h-5 w-5 mr-2 text-green-500" />
-                          Récapitulatif du transfert
-                        </h4>
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600">Montant à envoyer:</span>
-                            <span className="font-semibold">
-                              {amount} {senderCountries.find(c => c.id === senderCountryId)?.currencyCode}
-                            </span>
-                          </div>
-                          {feeCalculation ? (
-                            <>
-                              {/* Informations sur le taux appliqué */}
-                              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs font-medium text-blue-700">Taux appliqué:</span>
-                                  <span className="text-xs font-bold text-blue-800">{(feeCalculation as any).rateInfo?.name || 'Standard'}</span>
-                                </div>
-                                <div className="text-xs text-blue-600 mt-1">
-                                  Priorité {(feeCalculation as any).rateInfo?.priority || 1} - {(feeCalculation as any).rateInfo?.type === 'corridor' ? 'Corridor spécifique' : (feeCalculation as any).rateInfo?.type === 'country' ? 'Taux par pays' : 'Taux global'}
-                                </div>
-                              </div>
-                              
-                              {/* Détail des frais */}
-                              <div className="flex justify-between items-center">
-                                <span className="text-gray-600">{(feeCalculation as any).fees?.baseFee?.description || 'Frais de base'}:</span>
-                                <span className="font-semibold text-red-600">
-                                  -{(feeCalculation as any).fees?.baseFee?.amount || 0} {(feeCalculation as any).fees?.baseFee?.currency || 'USD'}
-                                </span>
-                              </div>
-                              {((feeCalculation as any).fees?.percentageFee?.amount || 0) > 0 && (
-                                <div className="flex justify-between items-center">
-                                  <span className="text-gray-600">{(feeCalculation as any).fees?.percentageFee?.description || 'Frais pourcentage'}:</span>
-                                  <span className="font-semibold text-red-600">
-                                    -{Number((feeCalculation as any).fees?.percentageFee?.amount || 0).toFixed(2)} {(feeCalculation as any).fees?.percentageFee?.currency || 'USD'}
-                                  </span>
-                                </div>
-                              )}
-                              <div className="flex justify-between items-center border-t pt-2">
-                                <span className="font-medium text-gray-800">Total des frais:</span>
-                                <span className="font-bold text-red-600">
-                                  -{Number((feeCalculation as any).fees?.total?.amount || 0).toFixed(2)} {(feeCalculation as any).fees?.total?.currency || 'USD'}
-                                </span>
-                              </div>
-                              
-                              {/* Taux de change */}
-                              {feeCalculation.senderCurrency !== feeCalculation.receiverCurrency && (
-                                <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs text-green-700">Taux marché:</span>
-                                    <span className="text-xs font-medium text-green-800">
-                                      1 {feeCalculation.senderCurrency} = {Number((feeCalculation as any).exchange?.marketRate || 0).toFixed(4)} {feeCalculation.receiverCurrency}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs text-green-700">Taux appliqué (marge {(feeCalculation as any).exchange?.margin || 0}%):</span>
-                                    <span className="text-xs font-bold text-green-800">
-                                      1 {feeCalculation.senderCurrency} = {Number((feeCalculation as any).exchange?.appliedRate || 0).toFixed(4)} {feeCalculation.receiverCurrency}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs text-green-700">Marge sur change:</span>
-                                    <span className="text-xs font-medium text-green-600">
-                                      +{Number((feeCalculation as any).exchange?.marginAmount || 0).toFixed(2)} {feeCalculation.senderCurrency}
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-                              
-                              {/* Montants finaux */}
-                              <div className="border-t pt-3 space-y-2">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-lg font-bold text-gray-900">Vous payez:</span>
-                                  <span className="text-2xl font-bold text-primary-600">
-                                    {Number((feeCalculation as any).summary?.totalPaid || 0).toFixed(2)} {feeCalculation.senderCurrency}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                  <span className="text-gray-600">Le destinataire reçoit:</span>
-                                  <span className="text-lg font-bold text-green-600">
-                                    {Number((feeCalculation as any).summary?.amountReceived || 0).toFixed(2)} {feeCalculation.receiverCurrency}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between items-center text-xs">
-                                  <span className="text-gray-500">Notre revenu total:</span>
-                                  <span className="font-medium text-gray-600">
-                                    {Number((feeCalculation as any).summary?.totalRevenue || 0).toFixed(2)} {feeCalculation.senderCurrency}
-                                  </span>
-                                </div>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="text-center py-4">
-                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mx-auto"></div>
-                              <p className="text-sm text-gray-500 mt-2">Calcul des frais...</p>
-                            </div>
-                          )}
-                        </div>
+                  </div>
+
+                  {/* Right Column - Receiver Information */}
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl p-4 border border-green-200 shadow-sm">
+                    <div className="flex items-center mb-4">
+                      <div className="bg-green-600 p-2 rounded-lg">
+                        <Send className="h-4 w-4 text-white" />
                       </div>
-                    )}
+                      <div className="ml-2">
+                        <h3 className="text-lg font-bold text-gray-900">Destinataire</h3>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <input
+                          {...register('receiverName', { required: 'Nom requis' })}
+                          className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white/90 text-sm"
+                          placeholder="Nom du destinataire *"
+                        />
+                        {errors.receiverName && <p className="text-red-500 text-xs mt-1">{errors.receiverName.message}</p>}
+                      </div>
+                      
+                      <div>
+                        <input
+                          {...register('receiverEmail')}
+                          type="email"
+                          className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white/90 text-sm"
+                          placeholder="Email (optionnel)"
+                        />
+                      </div>
+                      
+                      <div>
+                        <select
+                          {...register('receiverRegion', { required: 'Région requise' })}
+                          className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white/90 text-sm"
+                        >
+                          <option value="">Région destination *</option>
+                          {regions.map(region => (
+                            <option key={region.id} value={region.code}>{region.name}</option>
+                          ))}
+                        </select>
+                        {errors.receiverRegion && <p className="text-red-500 text-xs mt-1">{errors.receiverRegion.message}</p>}
+                      </div>
+                      
+                      <div>
+                        {loadingReceiverCountries ? (
+                          <div className="w-full px-3 py-2 border border-green-200 rounded-lg bg-white/90 text-sm flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
+                            <span className="text-gray-500">Chargement des pays...</span>
+                          </div>
+                        ) : (
+                          <CountrySelect
+                            countries={receiverCountries}
+                            value={receiverCountryId || ''}
+                            onChange={(value) => setValue('receiverCountryId', value, { shouldValidate: true })}
+                            placeholder="Pays destination *"
+                            disabled={!receiverRegion}
+                            error={errors.receiverCountryId?.message}
+                          />
+                        )}
+                        <input {...register('receiverCountryId', { required: 'Pays requis' })} type="hidden" value={receiverCountryId || ''} />
+                        {errors.receiverCountryId && <p className="text-red-500 text-xs mt-1">{errors.receiverCountryId.message}</p>}
+                      </div>
+                      
+                      <div>
+                        <PhoneInput
+                          value={watch('receiverPhone') || ''}
+                          onChange={(value) => setValue('receiverPhone', value)}
+                          countries={receiverCountries}
+                          label=""
+                          required
+                          error={errors.receiverPhone?.message}
+                          placeholder="Téléphone *"
+                        />
+                        <input {...register('receiverPhone', { required: 'Téléphone requis' })} type="hidden" />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex justify-center pt-8">
+
+
+                {/* Action Button - Always Visible */}
+                <div className="flex justify-center pt-4">
                   <button
                     type="button"
                     onClick={() => {
                       setLoading(true)
-                      // Vérifier que tous les champs requis sont remplis
                       const isFormValid = senderName && senderEmail && senderPhone && senderRegion && senderCountryId && 
                                          receiverName && receiverPhone && receiverRegion && receiverCountryId && amount
                       
                       if (isFormValid) {
-                        // Ajouter les noms des pays et régions
                         const senderCountryData = senderCountries.find(c => c.id === senderCountryId)
                         const receiverCountryData = receiverCountries.find(c => c.id === receiverCountryId)
                         const senderRegionData = regions.find(r => r.code === senderRegion)
                         const receiverRegionData = regions.find(r => r.code === receiverRegion)
                         
-                        // Rediriger vers la page de paiement avec les données
                         const transferData = {
-                          senderName,
-                          senderEmail,
-                          senderPhone,
-                          senderRegion,
-                          senderRegionName: senderRegionData?.name,
-                          senderCountryId,
-                          senderCountryName: senderCountryData?.name,
-                          senderCountryCode: senderCountryData?.currencyCode,
-                          receiverName,
-                          receiverPhone: watch('receiverPhone'),
-                          receiverEmail: watch('receiverEmail'),
-                          receiverRegion,
-                          receiverRegionName: receiverRegionData?.name,
-                          receiverCountryId,
-                          receiverCountryName: receiverCountryData?.name,
-                          receiverCountryCode: receiverCountryData?.currencyCode,
-                          amount,
-                          feeCalculation
+                          senderName, senderEmail, senderPhone, senderRegion,
+                          senderRegionName: senderRegionData?.name, senderCountryId,
+                          senderCountryName: senderCountryData?.name, senderCountryCode: senderCountryData?.currencyCode,
+                          receiverName, receiverPhone: watch('receiverPhone'), receiverEmail: watch('receiverEmail'),
+                          receiverRegion, receiverRegionName: receiverRegionData?.name, receiverCountryId,
+                          receiverCountryName: receiverCountryData?.name, receiverCountryCode: receiverCountryData?.currencyCode,
+                          amount, feeCalculation
                         }
                         
-                        // Stocker temporairement les données
                         sessionStorage.setItem('transferData', JSON.stringify(transferData))
                         router.push('/transfer/payment')
                       }
@@ -762,21 +598,23 @@ export default function TransferPage() {
                     }}
                     disabled={loading || !senderName || !senderEmail || !senderPhone || !senderRegion || !senderCountryId || 
                              !receiverName || !receiverPhone || !receiverRegion || !receiverCountryId || !amount}
-                    className="px-8 py-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center"
+                    className="w-full max-w-md px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                   >
                     {loading ? (
                       <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                         Préparation...
                       </>
                     ) : (
                       <>
                         Continuer le paiement
-                        <Send className="ml-2 h-5 w-5" />
+                        <Send className="ml-2 h-4 w-4" />
                       </>
                     )}
                   </button>
                 </div>
+
+
               </div>
             )}
 
