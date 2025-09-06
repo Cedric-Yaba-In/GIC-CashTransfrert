@@ -2,6 +2,73 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateNumericId, sanitizeInput, sanitizeForLog } from '@/lib/security'
 
+// Fonction pour générer des messages d'erreur descriptifs
+function getTransferErrorMessage(error: string): { title: string; description: string } {
+  const errorLower = error.toLowerCase()
+  
+  if (errorLower.includes('ip whitelisting') || errorLower.includes('ip_whitelisting')) {
+    return {
+      title: 'Configuration IP requise',
+      description: 'L\'adresse IP du serveur doit être ajoutée à la liste blanche Flutterwave. Contactez l\'administrateur technique.'
+    }
+  }
+  
+  if (errorLower.includes('insufficient') || errorLower.includes('balance')) {
+    return {
+      title: 'Solde insuffisant',
+      description: 'Le solde Flutterwave est insuffisant pour effectuer ce transfert. Vérifiez le solde du compte.'
+    }
+  }
+  
+  if (errorLower.includes('invalid account') || errorLower.includes('account not found')) {
+    return {
+      title: 'Compte destinataire invalide',
+      description: 'Le numéro de compte ou les informations du destinataire sont incorrects. Vérifiez les détails du bénéficiaire.'
+    }
+  }
+  
+  if (errorLower.includes('network') || errorLower.includes('timeout') || errorLower.includes('connection')) {
+    return {
+      title: 'Problème de connexion',
+      description: 'Impossible de se connecter à Flutterwave. Vérifiez la connexion internet et réessayez.'
+    }
+  }
+  
+  if (errorLower.includes('unauthorized') || errorLower.includes('authentication')) {
+    return {
+      title: 'Erreur d\'authentification',
+      description: 'Les clés API Flutterwave sont invalides ou expirées. Vérifiez la configuration.'
+    }
+  }
+  
+  if (errorLower.includes('rate limit') || errorLower.includes('too many requests')) {
+    return {
+      title: 'Limite de requêtes atteinte',
+      description: 'Trop de requêtes envoyées à Flutterwave. Attendez quelques minutes avant de réessayer.'
+    }
+  }
+  
+  if (errorLower.includes('currency') || errorLower.includes('exchange')) {
+    return {
+      title: 'Problème de devise',
+      description: 'La devise spécifiée n\'est pas supportée ou il y a un problème de taux de change.'
+    }
+  }
+  
+  if (errorLower.includes('amount') || errorLower.includes('limit')) {
+    return {
+      title: 'Montant invalide',
+      description: 'Le montant du transfert dépasse les limites autorisées ou est en dessous du minimum requis.'
+    }
+  }
+  
+  // Message générique pour les erreurs non reconnues
+  return {
+    title: 'Erreur de transfert',
+    description: `Le transfert automatique a échoué: ${error}. Contactez le support technique si le problème persiste.`
+  }
+}
+
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     const transactionId = validateNumericId(params.id)
@@ -77,40 +144,86 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         
         if (transferResult.success) {
           console.log('Automatic transfer completed successfully')
+          // Le statut APPROVED est déjà défini, on garde la transaction mise à jour
         } else {
           console.error('Automatic transfer failed:', transferResult.error)
           
-          // Si le transfert automatique échoue, mettre à jour les notes avec l'erreur
-          // mais garder le statut APPROVED pour traitement manuel
+          // Si le transfert automatique échoue, revenir au statut PAID avec l'erreur
           const currentNotes = JSON.parse(transaction.adminNotes || '{}')
           await prisma.transaction.update({
             where: { id: transactionId },
             data: {
+              status: 'PAID', // Revenir au statut PAID
               adminNotes: JSON.stringify({
                 ...currentNotes,
                 automaticTransferError: transferResult.error,
                 requiresManualTransfer: true,
-                errorTimestamp: new Date().toISOString()
+                errorTimestamp: new Date().toISOString(),
+                approvalAttempted: true
               })
             }
           })
+          
+          // Retourner la transaction avec le statut PAID et l'erreur
+          const updatedTransaction = await prisma.transaction.findUnique({
+            where: { id: transactionId },
+            include: {
+              senderCountry: true,
+              receiverCountry: true,
+              senderPaymentMethod: true,
+              receiverPaymentMethod: true,
+            }
+          })
+          
+          const errorMessage = getTransferErrorMessage(transferResult.error || 'Erreur inconnue')
+          
+          return NextResponse.json({
+            error: errorMessage.title,
+            details: errorMessage.description,
+            originalError: transferResult.error,
+            transaction: updatedTransaction
+          }, { status: 400 })
         }
       } catch (transferError) {
         console.error('Error during automatic transfer:', transferError)
         
-        // En cas d'erreur critique, mettre à jour les notes
+        // En cas d'erreur critique, revenir au statut PAID
         const currentNotes = JSON.parse(transaction.adminNotes || '{}')
+        const errorMessage = transferError instanceof Error ? transferError.message : String(transferError)
+        
         await prisma.transaction.update({
           where: { id: transactionId },
           data: {
+            status: 'PAID', // Revenir au statut PAID
             adminNotes: JSON.stringify({
               ...currentNotes,
-              criticalTransferError: transferError instanceof Error ? transferError.message : String(transferError),
+              criticalTransferError: errorMessage,
               requiresManualTransfer: true,
-              errorTimestamp: new Date().toISOString()
+              errorTimestamp: new Date().toISOString(),
+              approvalAttempted: true
             })
           }
         })
+        
+        // Retourner la transaction avec le statut PAID et l'erreur
+        const updatedTransaction = await prisma.transaction.findUnique({
+          where: { id: transactionId },
+          include: {
+            senderCountry: true,
+            receiverCountry: true,
+            senderPaymentMethod: true,
+            receiverPaymentMethod: true,
+          }
+        })
+        
+        const errorInfo = getTransferErrorMessage(errorMessage)
+        
+        return NextResponse.json({
+          error: errorInfo.title,
+          details: errorInfo.description,
+          originalError: errorMessage,
+          transaction: updatedTransaction
+        }, { status: 500 })
       }
     }
 

@@ -18,7 +18,8 @@
     "flutterwave:migrate": "tsx scripts/migrate-flutterwave-config.ts",
     "flutterwave:sync-banks": "node -e \"console.log('Use the API endpoint /api/flutterwave/sync-banks to sync banks for a specific country')\"",
     "rates:init": "tsx scripts/init-transfer-rates.ts",
-    "wallets:check": "tsx scripts/check-wallets.ts"
+    "wallets:check": "tsx scripts/check-wallets.ts",
+    "countries:check-codes": "tsx scripts/check-calling-codes.ts"
   },
   "dependencies": {
     "next": "^14.0.0",

@@ -86,6 +86,26 @@ class FlutterwaveService {
 
   constructor() {}
 
+  // Fonction utilitaire pour nettoyer les numéros de téléphone
+  private cleanPhoneNumber(phoneNumber: string, callingCode?: string): string {
+    console.log('Cleaning phone number:', phoneNumber, 'with calling code:', callingCode)
+    
+    if (!phoneNumber) return phoneNumber
+    
+    let cleaned = phoneNumber.trim()
+    cleaned = cleaned.replace(" ","").replace("+", "");
+    
+    // Si le numéro commence par +, supprimer l'indicatif pays
+    // if (cleaned.startsWith('+') && callingCode) {
+    //   if (cleaned.startsWith(callingCode)) {
+    //     cleaned = cleaned.substring(callingCode.length).trim()
+    //     console.log('Cleaned phone number:', cleaned)
+    //   }
+    // }
+    
+    return cleaned
+  }
+
   private async loadCountryConfig(countryId: number): Promise<FlutterwaveConfig | null> {
     if (this.countryConfigs.has(countryId)) {
       return this.countryConfigs.get(countryId)!
@@ -220,6 +240,16 @@ class FlutterwaveService {
   async createPayment(countryId: number, paymentData: FlutterwavePaymentData): Promise<FlutterwaveResponse | null> {
     try {
       const headers = await this.getHeaders(countryId)
+      
+      // Nettoyer le numéro de téléphone pour Flutterwave
+      const country = await prisma.country.findUnique({ where: { id: countryId } })
+      if (country?.callingCode && paymentData.customer.phonenumber) {
+        paymentData.customer.phonenumber = this.cleanPhoneNumber(
+          paymentData.customer.phonenumber, 
+          country.callingCode
+        )
+      }
+      
       const response = await fetch(`${this.baseUrl}/payments`, {
         method: 'POST',
         headers,
@@ -261,10 +291,10 @@ class FlutterwaveService {
         throw new Error('IP_WHITELISTING_REQUIRED')
       }
       
-      console.error('Flutterwave transfer creation failed:', sanitizeForLog(data))
-      return null
+      console.error('Flutterwave transfer creation failed:',data, sanitizeForLog(data))
+      throw new Error(data.message)
     } catch (error) {
-      if (error instanceof Error && error.message === 'IP_WHITELISTING_REQUIRED') {
+      if (error instanceof Error) { // && error.message === 'IP_WHITELISTING_REQUIRED'
         throw error
       }
       console.error('Error creating Flutterwave transfer:', sanitizeForLog(error))
@@ -411,6 +441,7 @@ class FlutterwaveService {
         receiverSubMethod,
         flutterwaveOption: adminNotes.flutterwaveOption,
         receiverPaymentInfo,
+        receiverPaymentData:transaction.receiverName,
         paymentMethodType
       })
 
@@ -420,24 +451,37 @@ class FlutterwaveService {
 
       // Prepare transfer data based on sub-method
       let transferData: FlutterwaveTransferData
+      const ref = `GIC_TRANSFER_${transaction.id}_${Date.now()}`;
 
       if (receiverSubMethod === 'mobilemoney') {
+        // Pour mobile money, nettoyer le numéro de téléphone
+        const rawPhoneNumber = receiverPaymentInfo.phoneNumber || transaction.receiverPhone
+        const cleanedPhoneNumber = this.cleanPhoneNumber(rawPhoneNumber, transaction.receiverCountry.callingCode || undefined)
+        console.log("Transfered data ",{
+          account_bank: 'MPS', // Mobile Payment Service
+          account_number: cleanedPhoneNumber,
+          amount: transaction.amount.toNumber(),
+          currency: transaction.receiverCountry.currencyCode,
+          narration: ref,
+          reference: ref
+        })
         transferData = {
           account_bank: 'MPS', // Mobile Payment Service
-          account_number: receiverPaymentInfo.phoneNumber || transaction.receiverPhone,
+          account_number: cleanedPhoneNumber,
           amount: transaction.amount.toNumber(),
-          currency: transaction.receiverCountry.currency,
-          narration: `Transfer from ${transaction.senderName}`,
-          reference: `GIC_TRANSFER_${transaction.id}_${Date.now()}`
+          currency: transaction.receiverCountry.currencyCode,
+          beneficiary_name: transaction.receiverName,
+          narration: ref,
+          reference: ref
         }
       } else if (receiverSubMethod === 'banktransfer') {
         transferData = {
           account_bank: receiverPaymentInfo.bankCode,
           account_number: receiverPaymentInfo.accountNumber,
           amount: transaction.amount.toNumber(),
-          currency: transaction.receiverCountry.currency,
-          narration: `Transfer from ${transaction.senderName}`,
-          reference: `GIC_TRANSFER_${transaction.id}_${Date.now()}`,
+          currency: transaction.receiverCountry.currencyCode,
+          narration: ref,//,`Transfer from ${transaction.senderName}`,
+          reference: ref,
           beneficiary_name: receiverPaymentInfo.accountName || transaction.receiverName
         }
       } else {
