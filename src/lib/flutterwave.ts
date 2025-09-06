@@ -618,6 +618,36 @@ class FlutterwaveService {
   }
 }
 
+// Fonction utilitaire pour récupérer la configuration Flutterwave d'un pays
+export async function getFlutterwaveConfig(countryId: string): Promise<{ secretKey: string; publicKey: string; countryCode: string } | null> {
+  try {
+    const countryPaymentMethod = await prisma.countryPaymentMethod.findFirst({
+      where: {
+        countryId: parseInt(countryId),
+        paymentMethod: { type: 'FLUTTERWAVE' },
+        active: true
+      },
+      include: {
+        country: true
+      }
+    })
+
+    if (!countryPaymentMethod?.apiConfig) {
+      return null
+    }
+
+    const config = JSON.parse(countryPaymentMethod.apiConfig) as FlutterwaveConfig
+    return {
+      secretKey: config.secretKey,
+      publicKey: config.publicKey,
+      countryCode: countryPaymentMethod.country.code
+    }
+  } catch (error) {
+    console.error(`Error loading Flutterwave config for country ${countryId}:`, error)
+    return null
+  }
+}
+
 export const flutterwaveService = new FlutterwaveService()
 export { FlutterwaveService }
 export type { PaymentMethod, FlutterwavePaymentData, FlutterwaveResponse, FlutterwaveTransferData, FlutterwaveTransferResponse }

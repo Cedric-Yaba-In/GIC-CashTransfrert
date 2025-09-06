@@ -8,6 +8,8 @@ import { useForm } from 'react-hook-form'
 import { useToast } from '@/components/ToastProvider'
 import { ArrowLeft, Send, CreditCard, CheckCircle, AlertCircle } from 'lucide-react'
 import FlutterwaveReceiverOptions from '@/components/FlutterwaveReceiverOptions'
+import BankSelector from '@/components/BankSelector'
+import AccountNumberInput from '@/components/AccountNumberInput'
 
 interface PaymentMethodAvailability {
   paymentMethodId: string
@@ -33,6 +35,7 @@ interface PaymentForm {
     mobileNumber?: string
     bankAccount?: string
     bankCode?: string
+    bankName?: string
     accountName?: string
   }
 }
@@ -640,7 +643,7 @@ export default function PaymentPage() {
                 {selectedReceiverMethod?.paymentMethodType === 'BANK_TRANSFER' && (
                   <div className="bg-purple-50 rounded-xl p-6 space-y-4">
                     <h3 className="font-semibold text-purple-900 mb-4">Compte bancaire du destinataire</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Nom du titulaire du compte *
@@ -657,23 +660,29 @@ export default function PaymentPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Numéro de compte *
                         </label>
-                        <input
-                          {...register('receiverPaymentInfo.bankAccount', { required: 'Numéro de compte requis' })}
-                          type="text"
-                          placeholder="1234567890"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        <AccountNumberInput
+                          value={watch('receiverPaymentInfo.bankAccount') || ''}
+                          onChange={(value) => setValue('receiverPaymentInfo.bankAccount', value)}
+                          placeholder="1234 5678 9012 3456"
+                          error={errors.receiverPaymentInfo?.bankAccount?.message}
                         />
+                        <input {...register('receiverPaymentInfo.bankAccount', { required: 'Numéro de compte requis' })} type="hidden" />
                       </div>
-                      <div className="md:col-span-2">
+                      <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Code banque / SWIFT *
+                          Banque *
                         </label>
-                        <input
-                          {...register('receiverPaymentInfo.bankCode', { required: 'Code banque requis' })}
-                          type="text"
-                          placeholder="ABCD1234"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        <BankSelector
+                          countryId={transferData.receiverCountryId}
+                          value={watch('receiverPaymentInfo.bankCode') || ''}
+                          onChange={(bankCode, bankName) => {
+                            setValue('receiverPaymentInfo.bankCode', bankCode)
+                            setValue('receiverPaymentInfo.bankName', bankName)
+                          }}
+                          error={errors.receiverPaymentInfo?.bankCode?.message}
                         />
+                        <input {...register('receiverPaymentInfo.bankCode', { required: 'Banque requise' })} type="hidden" />
+                        <input {...register('receiverPaymentInfo.bankName')} type="hidden" />
                       </div>
                     </div>
                   </div>
@@ -775,7 +784,7 @@ export default function PaymentPage() {
                       {selectedFlutterwaveOption === 'banktransfer' && (
                         <div className="bg-white rounded-lg p-4 border border-purple-200">
                           <h4 className="font-medium text-purple-900 mb-3">Informations bancaires du destinataire</h4>
-                          <div className="grid md:grid-cols-2 gap-4">
+                          <div className="space-y-4">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Nom du titulaire *
@@ -792,23 +801,29 @@ export default function PaymentPage() {
                               <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Numéro de compte *
                               </label>
-                              <input
-                                {...register('receiverPaymentInfo.bankAccount', { required: 'Numéro de compte requis' })}
-                                type="text"
-                                placeholder="1234567890"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              <AccountNumberInput
+                                value={watch('receiverPaymentInfo.bankAccount') || ''}
+                                onChange={(value) => setValue('receiverPaymentInfo.bankAccount', value)}
+                                placeholder="1234 5678 9012 3456"
+                                error={errors.receiverPaymentInfo?.bankAccount?.message}
                               />
+                              <input {...register('receiverPaymentInfo.bankAccount', { required: 'Numéro de compte requis' })} type="hidden" />
                             </div>
-                            <div className="md:col-span-2">
+                            <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Code banque / SWIFT *
+                                Banque *
                               </label>
-                              <input
-                                {...register('receiverPaymentInfo.bankCode', { required: 'Code banque requis' })}
-                                type="text"
-                                placeholder="ABCD1234"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              <BankSelector
+                                countryId={transferData.receiverCountryId}
+                                value={watch('receiverPaymentInfo.bankCode') || ''}
+                                onChange={(bankCode, bankName) => {
+                                  setValue('receiverPaymentInfo.bankCode', bankCode)
+                                  setValue('receiverPaymentInfo.bankName', bankName)
+                                }}
+                                error={errors.receiverPaymentInfo?.bankCode?.message}
                               />
+                              <input {...register('receiverPaymentInfo.bankCode', { required: 'Banque requise' })} type="hidden" />
+                              <input {...register('receiverPaymentInfo.bankName')} type="hidden" />
                             </div>
                           </div>
                         </div>

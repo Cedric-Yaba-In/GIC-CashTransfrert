@@ -1,34 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { flutterwaveService } from '@/lib/flutterwave'
-
-export const dynamic = 'force-dynamic'
-import { sanitizeForLog, sanitizeInput } from '@/lib/security'
+import { getFlutterwaveConfig } from '@/lib/flutterwave'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const country = searchParams.get('country')
     const countryId = searchParams.get('countryId')
 
-    if (!country || !countryId) {
-      return NextResponse.json(
-        { error: 'Country and countryId parameters are required' },
-        { status: 400 }
-      )
+    if (!countryId) {
+      return NextResponse.json({ error: 'Country ID is required' }, { status: 400 })
     }
 
-    const sanitizedCountry = sanitizeInput(country)
-    const banks = await flutterwaveService.getBanks(parseInt(countryId), sanitizedCountry)
-    
-    return NextResponse.json({
-      status: 'success',
-      data: banks
+    // Récupérer la configuration Flutterwave pour le pays de RÉCEPTION
+    const config = await getFlutterwaveConfig(countryId)
+    if (!config) {
+      return NextResponse.json({ error: 'Flutterwave not configured for receiver country' }, { status: 404 })
+    }
+
+    // Appeler l'API Flutterwave pour récupérer les banques du pays de réception
+    const response = await fetch(`https://api.flutterwave.com/v3/banks/${config.countryCode}`, {
+      headers: {
+        'Authorization': `Bearer ${config.secretKey}`,
+        'Content-Type': 'application/json'
+      }
     })
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch banks from Flutterwave')
+    }
+
+    const data = await response.json()
+    
+    if (data.status === 'success') {
+      return NextResponse.json(data.data)
+    } else {
+      return NextResponse.json({ error: 'Failed to fetch banks' }, { status: 500 })
+    }
+
   } catch (error) {
-    console.error('Error fetching banks:', sanitizeForLog(error))
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error('Error fetching Flutterwave banks:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
